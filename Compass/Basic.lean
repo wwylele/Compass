@@ -38,8 +38,8 @@ inductive ConstructibleLine [Fact (Module.finrank ℝ V = 2)] (initial : Set P) 
 
 inductive ConstructibleCircle [Fact (Module.finrank ℝ V = 2)] (initial : Set P) :
     Sphere P → Prop
-| centerRadius (o : Sphere P) (radius : P) (hcenter : ConstructiblePoint initial o.center)
-    (hradius : ConstructiblePoint initial radius) (horadius : o.radius = dist o.center radius) :
+| centerRadius (o : Sphere P) (r : P) (hcenter : ConstructiblePoint initial o.center)
+    (hradius : ConstructiblePoint initial r) (h : r ∈ o) :
     ConstructibleCircle initial o
 
 end
@@ -63,13 +63,13 @@ theorem ConstructiblePoint.map (f : P →ᵃⁱ[ℝ] P₂) {initial : Set P} {p 
   | ConstructiblePoint.lineCircle l o hl ho p hpl hpo => by
     apply ConstructiblePoint.lineCircle (l.map f.toAffineMap) (Sphere.mk (f o.center) o.radius)
       (hl.map f) (ho.map f) (f p) (by simpa using hpl)
-    simpa [← EuclideanGeometry.Sphere.mem_coe'] using hpo
+    simpa [← Sphere.mem_coe'] using hpo
   | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ => by
     apply ConstructiblePoint.twoCircles (Sphere.mk (f o₁.center) o₁.radius)
       (Sphere.mk (f o₂.center) o₂.radius) (ho₁.map f) (ho₂.map f)
       (by simpa [Sphere.ext_iff] using h) (f p)
-    · simpa [← EuclideanGeometry.Sphere.mem_coe'] using hpo₁
-    · simpa [← EuclideanGeometry.Sphere.mem_coe'] using hpo₂
+    · simpa [← Sphere.mem_coe'] using hpo₁
+    · simpa [← Sphere.mem_coe'] using hpo₂
 
 theorem ConstructibleLine.map (f : P →ᵃⁱ[ℝ] P₂) {initial : Set P} {l : AffineSubspace ℝ P}
     (h : ConstructibleLine initial l) :
@@ -89,10 +89,10 @@ theorem ConstructibleCircle.map (f : P →ᵃⁱ[ℝ] P₂) {initial : Set P} {o
     (h : ConstructibleCircle initial o) :
     ConstructibleCircle (f '' initial) (Sphere.mk (f o.center) o.radius) :=
   match h with
-  | ConstructibleCircle.centerRadius o radius hcenter hradius horadius => by
-    apply ConstructibleCircle.centerRadius (Sphere.mk (f o.center) o.radius) (f radius)
+  | ConstructibleCircle.centerRadius o r hcenter hradius h => by
+    apply ConstructibleCircle.centerRadius (Sphere.mk (f o.center) o.radius) (f r)
       (hcenter.map f) (hradius.map f)
-    simpa using horadius
+    simpa [← Sphere.mem_coe'] using h
 
 end
 
