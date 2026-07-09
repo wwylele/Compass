@@ -3,6 +3,285 @@ import Mathlib
 /-!
 -/
 
+variable {K L : Type*} [Field K] [Field L] [Algebra K L]
+
+namespace IntermediateField
+
+-- By Aristotle
+lemma relrank_le_relrank_of_le_left {A B C : IntermediateField K L} (h : A ≤ B) :
+    B.relrank C ≤ A.relrank C := by
+  rw [← relrank_inf_mul_relrank_of_le C h]
+  refine le_mul_of_one_le_left' ?_
+  rw [← inf_relrank_right A (B ⊓ C), relrank_eq_rank_of_le (inf_le_right : A ⊓ (B ⊓ C) ≤ B ⊓ C)]
+  exact Cardinal.one_le_iff_ne_zero.mpr (rank_pos (R := ↥(A ⊓ (B ⊓ C)))).ne'
+
+-- By Aristotle
+lemma relrank_sup_left_le (M B : IntermediateField K L)
+    (h : M.relrank B < Cardinal.aleph0) :
+    M.relrank (M ⊔ B) ≤ M.relrank B := by
+  have hInfB : (M ⊓ B : IntermediateField K L) ≤ B := inf_le_right
+  -- Identify `M.relrank B` with the rank of `B` over `M ⊓ B`.
+  have hRB : M.relrank B = Module.rank ↥(M ⊓ B) ↥(extendScalars hInfB) := by
+    rw [← inf_relrank_right M B, relrank_eq_rank_of_le hInfB]
+  -- Finiteness of the extension gives algebraicity.
+  have hfin : Module.rank ↥(M ⊓ B) ↥(extendScalars hInfB) < Cardinal.aleph0 := hRB ▸ h
+  have : Module.Free ↥(M ⊓ B) ↥(extendScalars hInfB) := by
+    apply Module.Free.of_divisionRing
+  haveI : Module.Finite ↥(M ⊓ B) ↥(extendScalars hInfB) := Module.rank_lt_aleph0_iff.mp hfin
+  haveI : Algebra.IsAlgebraic ↥(M ⊓ B) ↥(extendScalars hInfB) :=
+    Algebra.IsAlgebraic.of_finite _ _
+  -- Set up the field tower `(M ⊓ B) → M → L`.
+  letI : Algebra ↥(M ⊓ B) ↥M := (inclusion (inf_le_left : M ⊓ B ≤ M)).toAlgebra
+  haveI : IsScalarTower ↥(M ⊓ B) ↥M L := IsScalarTower.of_algebraMap_eq (fun _ => rfl)
+  -- The compositum degree bound for algebraic extensions.
+  have key := adjoin_rank_le_of_isAlgebraic_right (F := ↥(M ⊓ B)) (E := ↥M) (K := L)
+    (extendScalars hInfB)
+  rw [← hRB] at key
+  -- Identify `adjoin M ↑B` with `extendScalars (M ≤ M ⊔ B)`.
+  have hadj : adjoin ↥M (↑(extendScalars hInfB) : Set L)
+      = extendScalars (le_sup_left : M ≤ M ⊔ B) := by
+    apply restrictScalars_injective K
+    rw [extendScalars_restrictScalars, restrictScalars_adjoin_eq_sup, coe_extendScalars,
+      adjoin_self]
+  rw [hadj] at key
+  rwa [relrank_eq_rank_of_le (le_sup_left : M ≤ M ⊔ B)]
+
+-- By Aristotle
+theorem relrank_sup (e f g : IntermediateField K L)
+    (hef : e.relrank f < Cardinal.aleph0) :
+    (e ⊔ g).relrank (f ⊔ g) ≤ e.relrank f := by
+  set M : IntermediateField K L := (e ⊓ f) ⊔ g with hM
+  -- `f ⊔ g` is the compositum of `M` and `f`.
+  have hMf : M ⊔ f = f ⊔ g := by
+    rw [hM, sup_assoc, sup_comm g f, ← sup_assoc, sup_eq_right.mpr (inf_le_right : e ⊓ f ≤ f)]
+  -- `(e ⊓ f).relrank f = e.relrank f`.
+  have hinf : (e ⊓ f).relrank f = e.relrank f := inf_relrank_right e f
+  -- monotonicity: `M.relrank f ≤ (e ⊓ f).relrank f`.
+  have h3 : M.relrank f ≤ (e ⊓ f).relrank f :=
+    relrank_le_relrank_of_le_left (by rw [hM]; exact le_sup_left)
+  -- hence `M.relrank f` is finite, so the core bound applies.
+  have hMfin : M.relrank f < Cardinal.aleph0 := lt_of_le_of_lt (h3.trans_eq hinf) hef
+  have h2 : M.relrank (M ⊔ f) ≤ M.relrank f := relrank_sup_left_le M f hMfin
+  -- monotonicity: `(e ⊔ g).relrank (f ⊔ g) ≤ M.relrank (f ⊔ g)`.
+  have h1 : (e ⊔ g).relrank (f ⊔ g) ≤ M.relrank (f ⊔ g) :=
+    relrank_le_relrank_of_le_left (by rw [hM]; exact sup_le_sup_right inf_le_left g)
+  calc
+    (e ⊔ g).relrank (f ⊔ g) ≤ M.relrank (f ⊔ g) := h1
+    _ = M.relrank (M ⊔ f) := by rw [hMf]
+    _ ≤ M.relrank f := h2
+    _ ≤ (e ⊓ f).relrank f := h3
+    _ = e.relrank f := hinf
+
+instance [StarRing K] [StarRing L] [StarModule K L] : Star (IntermediateField K L) where
+  star f := {
+    __ := star f.toSubalgebra
+    inv_mem' x := by simp
+  }
+
+@[simp]
+theorem coe_star [StarRing K] [StarRing L] [StarModule K L] (f : IntermediateField K L) :
+    (star f : Set L) = star (f : Set L) :=
+  rfl
+
+@[simp]
+theorem mem_star_iff [StarRing K] [StarRing L] [StarModule K L] (f : IntermediateField K L)
+    (x : L) :
+    x ∈ star f ↔ star x ∈ f := by
+  rfl
+
+theorem star_mono [StarRing K] [StarRing L] [StarModule K L] :
+    Monotone (star : IntermediateField K L → IntermediateField K L) := by
+  intro f g h
+  apply Subalgebra.star_mono h
+
+@[simp]
+theorem star_bot [StarRing K] [StarRing L] [StarModule K L] :
+    star (⊥ : IntermediateField K L) = ⊥ := by
+  ext x
+  simp only [mem_star_iff, mem_bot, Set.mem_range]
+  exact ⟨fun ⟨y, h⟩ ↦ ⟨star y, by simp [h]⟩, fun ⟨y, h⟩ ↦ ⟨star y, by simp [h]⟩⟩
+
+@[simp]
+theorem relrank_star [StarRing K] [StarRing L] [StarModule K L]
+    (f g : IntermediateField K L) :
+    (star f).relrank (star g) = f.relrank g := by
+  rw [← inf_relrank_right _ (star g), ← inf_relrank_right _ g]
+  rw [relrank_eq_rank_of_le inf_le_right]
+  rw [relrank_eq_rank_of_le inf_le_right]
+  let i : ↥(f ⊓ g) ≃ ↥(star f ⊓ star g) := {
+    toFun := fun ⟨x, hx⟩ ↦ ⟨star x, by simpa using hx⟩
+    invFun := fun ⟨x, hx⟩ ↦ ⟨star x, by simpa using hx⟩
+    left_inv := by
+      intro x
+      simp
+    right_inv := by
+      intro x
+      simp
+  }
+  let j : ↥(extendScalars (inf_le_right : star f ⊓ star g ≤ star g)) ≃+
+      ↥(extendScalars (inf_le_right : f ⊓ g ≤ g)) := {
+    toFun := fun ⟨x, hx⟩ ↦ ⟨star x, by simpa using hx⟩
+    invFun := fun ⟨x, hx⟩ ↦ ⟨star x, by simpa using hx⟩
+    left_inv := by
+      intro x
+      simp
+    right_inv := by
+      intro x
+      simp
+    map_add' := by simp
+  }
+  apply le_antisymm
+  · apply rank_le_of_injective_injectiveₛ i j.toAddMonoidHom i.injective j.injective
+    · intro ⟨r, hr⟩ ⟨m, hm⟩
+      simp [i, j, IntermediateField.smul_def]
+  · apply rank_le_of_injective_injectiveₛ i.symm j.symm.toAddMonoidHom i.symm.injective
+      j.symm.injective
+    · intro ⟨r, hr⟩ ⟨m, hm⟩
+      simp [i, j, IntermediateField.smul_def]
+
+end IntermediateField
+
+inductive IsIteratedQuadraticExtension : IntermediateField K L → Prop
+| bot : IsIteratedQuadraticExtension ⊥
+| extension (f g : IntermediateField K L) (hf : IsIteratedQuadraticExtension f)
+    (hfg : f ≤ g) (hg : IntermediateField.relrank f g = 2) :
+    IsIteratedQuadraticExtension g
+
+theorem IsIteratedQuadraticExtension.extension'
+    {f g : IntermediateField K L} (hf : IsIteratedQuadraticExtension f)
+    (hfg : f ≤ g) (hg : IntermediateField.relrank f g ≤ 2) :
+    IsIteratedQuadraticExtension g := by
+  obtain h := Cardinal.toNat_le_toNat hg (by simp)
+  rw [Cardinal.toNat_ofNat] at h
+  interval_cases hrank : (f.relrank g).toNat
+  · -- to extract: rel rank ne zero
+    by_contra
+    obtain h := congr(($hrank : Cardinal))
+    rw [Cardinal.cast_toNat_of_lt_aleph0 (lt_of_le_of_lt hg (by simp))] at h
+    rw [IntermediateField.relrank_eq_rank_of_le hfg] at h
+    have hg : Subsingleton g := by simpa [Module.rank_zero_iff_of_free] using h
+    apply not_isField_of_subsingleton g (Field.toIsField g)
+  · rw [← IntermediateField.relfinrank_eq_toNat_relrank,
+      IntermediateField.relfinrank_eq_one_iff] at hrank
+    rw [le_antisymm hrank hfg]
+    exact hf
+  · apply IsIteratedQuadraticExtension.extension f g hf hfg
+    obtain h := congr(($hrank : Cardinal))
+    rw [Cardinal.cast_toNat_of_lt_aleph0 (lt_of_le_of_lt hg (by simp))] at h
+    simpa using h
+
+theorem IsIteratedQuadraticExtension.sup {f g : IntermediateField K L}
+    (hf : IsIteratedQuadraticExtension f) (hg : IsIteratedQuadraticExtension g) :
+    IsIteratedQuadraticExtension (f ⊔ g) :=
+match hf with
+| IsIteratedQuadraticExtension.bot => by simpa using hg
+| IsIteratedQuadraticExtension.extension e f he hef h => by
+  apply IsIteratedQuadraticExtension.extension' (he.sup hg) (sup_le_sup_right hef g)
+  rw [← h]
+  apply IntermediateField.relrank_sup
+  simp [h]
+
+theorem IsIteratedQuadraticExtension.finsetSup {ι : Type*} (s : Finset ι)
+    (f : ι → IntermediateField K L) (h : ∀ i ∈ s, IsIteratedQuadraticExtension (f i)) :
+    IsIteratedQuadraticExtension (s.sup f) := by
+  induction s using Finset.cons_induction with
+  | empty =>
+    simpa using IsIteratedQuadraticExtension.bot
+  | cons a s has ih =>
+    rw [Finset.sup_cons]
+    apply IsIteratedQuadraticExtension.sup
+    · apply h
+      simp
+    apply ih
+    intro i hi
+    apply h
+    simp [hi]
+
+protected theorem IsIteratedQuadraticExtension.star [StarRing K] [StarRing L] [StarModule K L]
+    {f : IntermediateField K L}
+    (hf : IsIteratedQuadraticExtension f) :
+    IsIteratedQuadraticExtension (star f) :=
+match hf with
+| IsIteratedQuadraticExtension.bot => by simpa using IsIteratedQuadraticExtension.bot
+| IsIteratedQuadraticExtension.extension e f' he hef h => by
+  refine IsIteratedQuadraticExtension.extension (star e) (star f') he.star ?_ ?_
+  · exact IntermediateField.star_mono hef
+  · simpa using h
+
+variable (K L) in
+def constructibleClosure : IntermediateField K L :=
+    ⨆ (f : IntermediateField K L) (_ : IsIteratedQuadraticExtension f), f
+
+theorem mem_constructibleClosure {x : L} :
+    x ∈ constructibleClosure K L ↔
+    ∃ f : IntermediateField K L, IsIteratedQuadraticExtension f ∧ x ∈ f where
+  mp h := by
+    obtain ⟨s, h⟩ := IntermediateField.exists_finset_of_mem_iSup h
+    refine ⟨_, ?_, h⟩
+    rw [← Finset.sup_eq_iSup]
+    apply IsIteratedQuadraticExtension.finsetSup
+    intro i _
+    by_cases h : IsIteratedQuadraticExtension i
+    · simp [h]
+    · simpa [h] using IsIteratedQuadraticExtension.bot
+  mpr h := by
+    obtain ⟨f, hf, hx⟩ := h
+    apply SetLike.mem_of_subset ?_ hx
+    rw [SetLike.coe_subset_coe]
+    apply le_iSup_of_le f
+    simp [hf]
+
+theorem star_mem_constructibleClosure [StarRing K] [StarRing L] [StarModule K L]
+    {x : L} (hx : x ∈ constructibleClosure K L) :
+    star x ∈ constructibleClosure K L := by
+  rw [mem_constructibleClosure] at ⊢ hx
+  obtain ⟨f, hf, hx⟩ := hx
+  exact ⟨star f, hf.star, by simpa using hx⟩
+
+theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructibleClosure K L) :
+    x ∈ constructibleClosure K L := by
+  rw [mem_constructibleClosure] at ⊢ hx
+  obtain ⟨f, hf, hx⟩ := hx
+  have halg : IsAlgebraic f x := by
+    refine ⟨Polynomial.X ^ 2 - Polynomial.C ⟨x ^ 2, hx⟩, fun h ↦ ?_, by simp⟩
+    obtain h := congr(Polynomial.coeff $h 2)
+    simp at h
+  obtain ⟨y, hy0, hy⟩ := IsAlgebraic.iff_exists_smul_integral.mp halg
+  have hle : f ≤ IntermediateField.adjoin K (↑f ∪ {y • x}) := by
+    rw [← SetLike.coe_subset_coe]
+    exact Set.subset_union_left.trans (IntermediateField.subset_adjoin K (f ∪ {y • x}))
+  refine ⟨IntermediateField.adjoin K (f ∪ {y • x}), ?_, ?_⟩
+  · refine IsIteratedQuadraticExtension.extension' hf hle ?_
+    rw [IntermediateField.relrank_eq_rank_of_le hle, IntermediateField.extendScalars_adjoin]
+    rw [IntermediateField.adjoin_union, IntermediateField.adjoin_eq_bot_iff.mpr (by
+      intro x
+      simp [IntermediateField.mem_bot]), bot_sup_eq]
+    rw [← Cardinal.toNat_le_iff_le_of_lt_aleph0 (by
+      rw [Module.rank_lt_aleph0_iff]
+      apply IntermediateField.finiteDimensional_adjoin
+      simpa using hy
+    ) (by simp)]
+    rw [← Module.finrank, IntermediateField.adjoin.finrank hy]
+    let p : Polynomial f := Polynomial.X ^ 2 - Polynomial.C ⟨y ^ 2 * x ^ 2, by
+      apply mul_mem
+      · apply pow_mem
+        exact y.prop
+      · exact hx⟩
+    have hp : p.aeval (y • x) = 0 := by
+      simp [p, Algebra.smul_def, mul_pow]
+    have hp0 : p ≠ 0 := fun h ↦ by
+      obtain h := congr(Polynomial.coeff $h 2)
+      simp [p] at h
+    convert ← Polynomial.natDegree_le_of_dvd (minpoly.dvd _ _ hp) hp0
+    simp_rw [Cardinal.toNat_ofNat, p]
+    compute_degree!
+  · suffices y • x ∈ IntermediateField.adjoin K (↑f ∪ {y • x}) by
+      let k := (IntermediateField.adjoin K (↑f ∪ {y • x}))
+      change x ∈ (IntermediateField.extendScalars hle).toSubmodule
+      change y • x ∈ (IntermediateField.extendScalars hle).toSubmodule at this
+      exact (Submodule.smul_mem_iff _ hy0).mp this
+    apply IntermediateField.mem_adjoin_of_mem
+    simp
 
 namespace EuclideanGeometry
 
@@ -95,6 +374,10 @@ theorem ConstructibleCircle.map (f : P →ᵃⁱ[ℝ] P₂) {initial : Set P} {o
     simpa [← Sphere.mem_coe'] using h
 
 end
+
+instance : Fact (Module.finrank ℝ ℂ = 2) := ⟨Complex.finrank_real_complex⟩
+
+
 
 theorem not_exist_angle_trisection :
     ∃ p₁ p₂ p₃ : P, ∀ q₁ q₂ q₃ : P,
