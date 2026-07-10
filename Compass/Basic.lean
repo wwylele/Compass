@@ -160,13 +160,18 @@ match hf with
 
 theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
     (P : L → Prop)
-    (bot : ∀ x ∈ (⊥ : IntermediateField K L), P x)
+    (bot : ∀ x : K, P (algebraMap K L x))
     (add : ∀ x y, P x → P y → P (x + y))
     (inv : ∀ x, P x → P x⁻¹)
     (mul : ∀ x y, P x → P y → P (x * y))
     (sqrt : ∀ x, P (x ^ 2) → P x)
     {f : IntermediateField K L} (hf : IsIteratedQuadraticExtension f) : ∀ x ∈ f, P x := by
-  refine IsIteratedQuadraticExtension.induction (fun f ↦ ∀ x ∈ f, P x) bot ?_ hf
+  have hbot : ∀ x ∈ (⊥ : IntermediateField K L), P x := by
+    intro x hx
+    rw [IntermediateField.mem_bot, Set.mem_range] at hx
+    obtain ⟨y, rfl⟩ := hx
+    apply bot
+  refine IsIteratedQuadraticExtension.induction (fun f ↦ ∀ x ∈ f, P x) hbot ?_ hf
   intro f g hf hfg hg ih
   suffices ∀ x ∈ (⊤ : IntermediateField ↥f ↥(IntermediateField.extendScalars hfg)), P x by
     intro x hx
@@ -224,7 +229,7 @@ theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
         linear_combination this
       rw [this]
       apply mul
-      · apply bot
+      · apply hbot
         simp
       · exact ih r r.prop
     · have : (minpoly f a).IsMonicOfDegree 2 := ⟨hd, minpoly.monic hint⟩
@@ -387,14 +392,201 @@ theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructible
   · apply IntermediateField.mem_adjoin_of_mem
     simp
 
+theorem constructibleClosure_induction (h0 : (2 : L) ≠ 0)
+    (P : L → Prop)
+    (bot : ∀ x : K, P (algebraMap K L x))
+    (add : ∀ x y, P x → P y → P (x + y))
+    (inv : ∀ x, P x → P x⁻¹)
+    (mul : ∀ x y, P x → P y → P (x * y))
+    (sqrt : ∀ x, P (x ^ 2) → P x) :
+    ∀ x ∈ constructibleClosure K L, P x := by
+  intro x hx
+  rw [mem_constructibleClosure] at hx
+  obtain ⟨f, hf, hx⟩ := hx
+  exact hf.mem_induction h0 P bot add inv mul sqrt x hx
 
-theorem mem_constructibleClosure_complex_iff {f : Subfield ℂ} (h : ∀ x ∈ f, star x ∈ f)
+theorem constructibleClosure_closure_induction (h0 : (2 : L) ≠ 0) {s : Set L}
+    {P : L → Prop}
+    (mem : ∀ x ∈ s, P x)
+    (one : P 1)
+    (add : ∀ x y, P x → P y → P (x + y))
+    (neg : ∀ x, P x → P (-x))
+    (inv : ∀ x, P x → P x⁻¹)
+    (mul : ∀ x y, P x → P y → P (x * y))
+    (sqrt : ∀ x, P (x ^ 2) → P x) :
+    ∀ x ∈ constructibleClosure (Subfield.closure s) L, P x := by
+  refine constructibleClosure_induction h0 P ?_ add inv mul sqrt
+  intro x
+  obtain ⟨x, hx⟩ := x
+  induction hx using Subfield.closure_induction with
+  | mem x hx =>
+    exact mem x hx
+  | one =>
+    exact one
+  | add x y hx hy hpx hpy =>
+    exact add x y hpx hpy
+  | neg x hx hpx =>
+    exact neg x hpx
+  | inv x hx hpx =>
+    exact inv x hpx
+  | mul x y hx hy hpx hpy =>
+    exact mul x y hpx hpy
+
+open Polynomial in
+theorem Complex.sq_eq_iff {a b : ℂ} :
+    a ^ 2 = b ↔ a = Complex.sqrt b ∨ a = -Complex.sqrt b where
+  mp h := by
+    let p : Polynomial ℂ := C 1 * X ^ 2 + C 0 * X + C (-b)
+    have hp0 : p ≠ 0 := by
+      intro h
+      obtain h := congr(Polynomial.coeff $h 2)
+      simp [p] at h
+    have hp : a ∈ p.roots := by
+      rw [mem_roots hp0]
+      simp [p, h]
+    suffices p.roots = {b.sqrt, -b.sqrt} by
+      simpa [this] using hp
+    rw [Polynomial.roots_quadratic_eq_pair_iff_of_ne_zero' (by simp)]
+    suffices b.sqrt * b.sqrt = b by simpa
+    rw [← sq, sqrt]
+    simp
+  mpr h := by
+    rcases h with h | h
+    · simp [h, Complex.sqrt]
+    · simp [h, Complex.sqrt]
+
+theorem Complex.sqrt_eq_real_add_ite' {a : ℂ} :
+    a.sqrt = √((‖a‖ + a.re) / 2) +
+    ((if 0 ≤ a.im then 1 else -1) * √((‖a‖ - a.re) / 2) : ℝ) * I := by
+  convert Complex.sqrt_eq_real_add_ite
+  split_ifs
+  all_goals
+  norm_cast
+
+theorem Complex.re_sq_of_sq_eq {a b : ℂ} (h : a ^ 2 = b) :
+    a.re ^ 2 = (‖b‖ + b.re) / 2 := by
+  rw [Complex.sq_eq_iff] at h
+  have : b.sqrt.re ^ 2 = (‖b‖ + b.re) / 2 := by
+    rw [Complex.sqrt_eq_real_add_ite', Complex.add_re]
+    rw [Complex.ofReal_re, Complex.mul_I_re, Complex.ofReal_im, neg_zero, add_zero]
+    rw [Real.sq_sqrt]
+    refine div_nonneg ?_ (by simp)
+    simpa [neg_le_iff_add_nonneg] using Complex.re_le_norm (-b)
+  rcases h with h | h
+  · rw [h]
+    exact this
+  · rw [h, Complex.neg_re, neg_sq]
+    exact this
+
+theorem Complex.im_sq_of_sq_eq {a b : ℂ} (h : a ^ 2 = b) :
+    a.im ^ 2 = (‖b‖ - b.re) / 2 := by
+  rw [Complex.sq_eq_iff] at h
+  have : b.sqrt.im ^ 2 = (‖b‖ - b.re) / 2 := by
+    rw [Complex.sqrt_eq_real_add_ite', Complex.add_im]
+    rw [Complex.ofReal_im, Complex.mul_I_im, Complex.ofReal_re, zero_add,
+      mul_pow, ite_pow, Real.sq_sqrt]
+    · simp
+    refine div_nonneg ?_ (by simp)
+    simpa using Complex.re_le_norm b
+  rcases h with h | h
+  · rw [h]
+    exact this
+  · rw [h, Complex.neg_im, neg_sq]
+    exact this
+
+theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
+    (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
+    ({x.re, x.im} : Set ℝ) ⊆
+      constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+  revert h
+  rw [Set.pair_subset_iff]
+  apply constructibleClosure_closure_induction
+  · simp
+  · intro x hx
+    constructor
+    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+      refine ⟨⟨x.re, ?_⟩, ?_⟩
+      · apply Subfield.mem_closure_of_mem
+        grind
+      · simp [Subfield.algebraMap_ofSubfield]
+    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+      refine ⟨⟨x.im, ?_⟩, ?_⟩
+      · apply Subfield.mem_closure_of_mem
+        grind
+      · simp [Subfield.algebraMap_ofSubfield]
+  · constructor
+    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+      refine ⟨⟨1, by simp⟩, ?_⟩
+      simp [Subtype.ext_iff]
+    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+      refine ⟨⟨0, by simp⟩, ?_⟩
+      simp [Subtype.ext_iff]
+  · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
+    constructor
+    · rw [Complex.add_re]
+      exact Subfield.add_mem _ hxr hyr
+    · rw [Complex.add_im]
+      exact Subfield.add_mem _ hxi hyi
+  · intro x ⟨hxr, hxi⟩
+    constructor
+    · rw [Complex.neg_re]
+      exact Subfield.neg_mem _ hxr
+    · rw [Complex.neg_im]
+      exact Subfield.neg_mem _ hxi
+  · intro x ⟨hxr, hxi⟩
+    have hnorm : Complex.normSq x ∈ ↑(constructibleClosure
+        ↥(Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) := by
+      rw [Complex.normSq_apply]
+      apply Subfield.add_mem
+      · exact Subfield.mul_mem _ hxr hxr
+      · exact Subfield.mul_mem _ hxi hxi
+    constructor
+    · rw [Complex.inv_re]
+      exact Subfield.div_mem _ hxr hnorm
+    · rw [Complex.inv_im]
+      exact Subfield.div_mem _ (Subfield.neg_mem _ hxi) hnorm
+  · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
+    constructor
+    · rw [Complex.mul_re]
+      apply Subfield.sub_mem
+      · exact Subfield.mul_mem _ hxr hyr
+      · exact Subfield.mul_mem _ hxi hyi
+    · rw [Complex.mul_im]
+      apply Subfield.add_mem
+      · exact Subfield.mul_mem _ hxr hyi
+      · exact Subfield.mul_mem _ hxi hyr
+  · intro x ⟨hxr, hxi⟩
+    have hnorm : ‖x ^ 2‖ ∈ constructibleClosure
+        (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+      apply mem_constructibleClosure_of_sq_mem
+      rw [Complex.sq_norm, Complex.normSq_apply]
+      apply Subfield.add_mem
+      · exact Subfield.mul_mem _ hxr hxr
+      · exact Subfield.mul_mem _ hxi hxi
+    constructor
+    · apply mem_constructibleClosure_of_sq_mem
+      rw [Complex.re_sq_of_sq_eq rfl]
+      refine Subfield.div_mem _ ?_ (by simp)
+      exact Subfield.add_mem _ hnorm hxr
+    · apply mem_constructibleClosure_of_sq_mem
+      rw [Complex.im_sq_of_sq_eq rfl]
+      refine Subfield.div_mem _ ?_ (by simp)
+      exact Subfield.sub_mem _ hnorm hxr
+
+
+theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, star x ∈ s)
     {x : ℂ} :
-    x ∈ constructibleClosure f ℂ ↔
+    x ∈ constructibleClosure (Subfield.closure s) ℂ ↔
       ({x.re, x.im} : Set ℝ) ⊆
-      constructibleClosure (Subfield.closure (Complex.re '' f ∪ Complex.im '' f)) ℝ where
-  mp h := sorry
-  mpr h := sorry
+      constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ where
+  mp := re_im_subset_constructibleClosure
+  mpr h := by
+
+    sorry
 
 namespace EuclideanGeometry
 
