@@ -585,8 +585,22 @@ theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, sta
       constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ where
   mp := re_im_subset_constructibleClosure
   mpr h := by
+    rw [← Complex.re_add_im x]
+    revert h
+    rw [Set.pair_subset_iff]
+    simp only [SetLike.mem_coe, and_imp]
+    generalize x.re = a
+    generalize x.im = b
+    apply constructibleClosure_closure_induction
+    · simp
+    · sorry
+    · sorry
+    · sorry
+    · sorry
+    · sorry
+    · sorry
+    · sorry
 
-    sorry
 
 namespace EuclideanGeometry
 
