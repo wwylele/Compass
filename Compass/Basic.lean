@@ -147,6 +147,120 @@ inductive IsIteratedQuadraticExtension : IntermediateField K L → Prop
     (hfg : f ≤ g) (hg : IntermediateField.relrank f g = 2) :
     IsIteratedQuadraticExtension g
 
+theorem IsIteratedQuadraticExtension.induction (P : IntermediateField K L → Prop)
+    (bot : P ⊥)
+    (extension : ∀ f g : IntermediateField K L, IsIteratedQuadraticExtension f → f ≤ g
+      → IntermediateField.relrank f g = 2 → P f → P g)
+    {f : IntermediateField K L} (hf : IsIteratedQuadraticExtension f) : P f :=
+match hf with
+| IsIteratedQuadraticExtension.bot => by simpa using bot
+| IsIteratedQuadraticExtension.extension e f he hef h => by
+  apply extension _ _ he hef h
+  apply IsIteratedQuadraticExtension.induction P bot extension he
+
+theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
+    (P : L → Prop)
+    (bot : ∀ x ∈ (⊥ : IntermediateField K L), P x)
+    (add : ∀ x y, P x → P y → P (x + y))
+    (inv : ∀ x, P x → P x⁻¹)
+    (mul : ∀ x y, P x → P y → P (x * y))
+    (sqrt : ∀ x, P (x ^ 2) → P x)
+    {f : IntermediateField K L} (hf : IsIteratedQuadraticExtension f) : ∀ x ∈ f, P x := by
+  refine IsIteratedQuadraticExtension.induction (fun f ↦ ∀ x ∈ f, P x) bot ?_ hf
+  intro f g hf hfg hg ih
+  suffices ∀ x ∈ (⊤ : IntermediateField ↥f ↥(IntermediateField.extendScalars hfg)), P x by
+    intro x hx
+    apply this ⟨x, by simpa using hx⟩
+    simp
+  rw [IntermediateField.relrank_eq_rank_of_le hfg] at hg
+  have : Module.Finite f (IntermediateField.extendScalars hfg) :=
+    Module.finite_of_rank_eq_nat hg
+  have : Module.Free f (IntermediateField.extendScalars hfg) := by
+    apply Module.Free.of_divisionRing
+  have : Algebra.IsSeparable f (IntermediateField.extendScalars hfg) := by
+    rw [Algebra.isSeparable_def]
+    intro a
+    have hint : IsIntegral f a := (IsAlgebraic.of_finite f a).isIntegral
+    have : (minpoly f a).natDegree ≤ 2 := by
+      apply (minpoly.natDegree_le a).trans_eq
+      rw [Module.finrank_eq_of_rank_eq hg]
+    have : 0 < (minpoly f a).natDegree := minpoly.natDegree_pos hint
+    set d := (minpoly f a).natDegree
+    interval_cases hd : d
+    · have : (minpoly f a).IsMonicOfDegree 1 := ⟨hd, minpoly.monic hint⟩
+      obtain ⟨r, h⟩ := Polynomial.isMonicOfDegree_one_iff.mp this
+      rw [IsSeparable, h]
+      exact Polynomial.separable_X_add_C r
+    · have : (minpoly f a).IsMonicOfDegree 2 := ⟨hd, minpoly.monic hint⟩
+      obtain ⟨r, s, h⟩ := Polynomial.isMonicOfDegree_two_iff.mp this
+      rw [IsSeparable]
+      rw [Polynomial.separable_iff_derivative_ne_zero (minpoly.irreducible hint)]
+      suffices (1 + 1) * Polynomial.X + Polynomial.C r ≠ 0 by simpa [h]
+      rw [show (1 + 1) = (2 : Polynomial ↥f) by norm_num]
+      intro h
+      contrapose h0
+      obtain h := congr((Polynomial.coeff $h 1))
+      have h : (2 : f) = 0 := by simpa using h
+      obtain h := congr(($h).val)
+      push_cast at h
+      exact h
+  obtain ⟨a, ha⟩ := Field.exists_primitive_element f (IntermediateField.extendScalars hfg)
+  rw [← ha]
+  apply IntermediateField.adjoin_induction
+  · suffices P a by simpa
+    have hint : IsIntegral f a := (IsAlgebraic.of_finite f a).isIntegral
+    have : (minpoly f a).natDegree ≤ 2 := by
+      apply (minpoly.natDegree_le a).trans_eq
+      rw [Module.finrank_eq_of_rank_eq hg]
+    have : 0 < (minpoly f a).natDegree := minpoly.natDegree_pos hint
+    set d := (minpoly f a).natDegree
+    interval_cases hd : d
+    · have : (minpoly f a).IsMonicOfDegree 1 := ⟨hd, minpoly.monic hint⟩
+      obtain ⟨r, h⟩ := Polynomial.isMonicOfDegree_one_iff.mp this
+      have heval := minpoly.aeval f a
+      rw [h, Subtype.ext_iff] at heval
+      have : a.val + r.val = 0 := by simpa using! heval
+      have : a.val = (-1) * r.val := by
+        linear_combination this
+      rw [this]
+      apply mul
+      · apply bot
+        simp
+      · exact ih r r.prop
+    · have : (minpoly f a).IsMonicOfDegree 2 := ⟨hd, minpoly.monic hint⟩
+      obtain ⟨r, s, h⟩ := Polynomial.isMonicOfDegree_two_iff.mp this
+      have heval := minpoly.aeval f a
+      rw [h, Subtype.ext_iff] at heval
+      have : (a.val) ^ 2 + r.val * a.val + s.val = 0 := by
+        simpa [-Algebra.mul_smul_comm] using! heval
+      have : (2 * a.val + r.val) ^ 2 = r.val ^ 2 - 4 * s.val := by
+        linear_combination 4 * this
+      have : (2 * a.val + r.val) ^ 2 = (r ^ 2 - 4 * s).val := this
+      have hP : P (2 * a.val + r.val) := by
+        apply sqrt
+        rw [this]
+        exact ih _ (r ^ 2 - 4 * s).prop
+      have : a.val = 2⁻¹ * (2 * a.val + r.val + (-1) * r.val) := by
+        rw [neg_one_mul, ← sub_eq_add_neg, add_sub_cancel_right]
+        rw [inv_mul_cancel_left₀ h0]
+      rw [this]
+      apply mul
+      · apply inv
+        exact ih _ (by simp)
+      · apply add
+        · exact hP
+        · apply mul
+          · exact ih _ (by simp)
+          · exact ih r r.prop
+  · intro x
+    simpa using ih x x.prop
+  · intro x y hx hy hpx hpy
+    exact add x y hpx hpy
+  · intro x hx hpx
+    exact inv x hpx
+  · intro x y hx hy hpx hpy
+    exact mul x y hpx hpy
+
 theorem IsIteratedQuadraticExtension.extension'
     {f g : IntermediateField K L} (hf : IsIteratedQuadraticExtension f)
     (hfg : f ≤ g) (hg : IntermediateField.relrank f g ≤ 2) :
@@ -246,11 +360,11 @@ theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructible
     refine ⟨Polynomial.X ^ 2 - Polynomial.C ⟨x ^ 2, hx⟩, fun h ↦ ?_, by simp⟩
     obtain h := congr(Polynomial.coeff $h 2)
     simp at h
-  obtain ⟨y, hy0, hy⟩ := IsAlgebraic.iff_exists_smul_integral.mp halg
-  have hle : f ≤ IntermediateField.adjoin K (↑f ∪ {y • x}) := by
+  have hint := halg.isIntegral
+  have hle : f ≤ IntermediateField.adjoin K (f ∪ {x}) := by
     rw [← SetLike.coe_subset_coe]
-    exact Set.subset_union_left.trans (IntermediateField.subset_adjoin K (f ∪ {y • x}))
-  refine ⟨IntermediateField.adjoin K (f ∪ {y • x}), ?_, ?_⟩
+    exact Set.subset_union_left.trans (IntermediateField.subset_adjoin K (f ∪ {x}))
+  refine ⟨IntermediateField.adjoin K (f ∪ {x}), ?_, ?_⟩
   · refine IsIteratedQuadraticExtension.extension' hf hle ?_
     rw [IntermediateField.relrank_eq_rank_of_le hle, IntermediateField.extendScalars_adjoin]
     rw [IntermediateField.adjoin_union, IntermediateField.adjoin_eq_bot_iff.mpr (by
@@ -259,29 +373,28 @@ theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructible
     rw [← Cardinal.toNat_le_iff_le_of_lt_aleph0 (by
       rw [Module.rank_lt_aleph0_iff]
       apply IntermediateField.finiteDimensional_adjoin
-      simpa using hy
+      simpa using hint
     ) (by simp)]
-    rw [← Module.finrank, IntermediateField.adjoin.finrank hy]
-    let p : Polynomial f := Polynomial.X ^ 2 - Polynomial.C ⟨y ^ 2 * x ^ 2, by
-      apply mul_mem
-      · apply pow_mem
-        exact y.prop
-      · exact hx⟩
-    have hp : p.aeval (y • x) = 0 := by
-      simp [p, Algebra.smul_def, mul_pow]
+    rw [← Module.finrank, IntermediateField.adjoin.finrank hint]
+    let p : Polynomial f := Polynomial.X ^ 2 - Polynomial.C (⟨x ^ 2, hx⟩)
+    have hp : p.aeval x = 0 := by simp [p]
     have hp0 : p ≠ 0 := fun h ↦ by
       obtain h := congr(Polynomial.coeff $h 2)
-      simp [p] at h
+      simp [p, -map_mul] at h
     convert ← Polynomial.natDegree_le_of_dvd (minpoly.dvd _ _ hp) hp0
     simp_rw [Cardinal.toNat_ofNat, p]
     compute_degree!
-  · suffices y • x ∈ IntermediateField.adjoin K (↑f ∪ {y • x}) by
-      let k := (IntermediateField.adjoin K (↑f ∪ {y • x}))
-      change x ∈ (IntermediateField.extendScalars hle).toSubmodule
-      change y • x ∈ (IntermediateField.extendScalars hle).toSubmodule at this
-      exact (Submodule.smul_mem_iff _ hy0).mp this
-    apply IntermediateField.mem_adjoin_of_mem
+  · apply IntermediateField.mem_adjoin_of_mem
     simp
+
+
+theorem mem_constructibleClosure_complex_iff {f : Subfield ℂ} (h : ∀ x ∈ f, star x ∈ f)
+    {x : ℂ} :
+    x ∈ constructibleClosure f ℂ ↔
+      ({x.re, x.im} : Set ℝ) ⊆
+      constructibleClosure (Subfield.closure (Complex.re '' f ∪ Complex.im '' f)) ℝ where
+  mp h := sorry
+  mpr h := sorry
 
 namespace EuclideanGeometry
 
