@@ -3,6 +3,8 @@ import Mathlib
 /-!
 -/
 
+open ComplexConjugate
+
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
 
 namespace IntermediateField
@@ -496,10 +498,9 @@ theorem Complex.im_sq_of_sq_eq {a b : ℂ} (h : a ^ 2 = b) :
 
 theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
     (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
-    ({x.re, x.im} : Set ℝ) ⊆
-      constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+    x.re ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ ∧
+    x.im ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
   revert h
-  rw [Set.pair_subset_iff]
   apply constructibleClosure_closure_induction
   · simp
   · intro x hx
@@ -528,79 +529,110 @@ theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
   · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
     constructor
     · rw [Complex.add_re]
-      exact Subfield.add_mem _ hxr hyr
+      exact add_mem hxr hyr
     · rw [Complex.add_im]
-      exact Subfield.add_mem _ hxi hyi
+      exact add_mem hxi hyi
   · intro x ⟨hxr, hxi⟩
     constructor
     · rw [Complex.neg_re]
-      exact Subfield.neg_mem _ hxr
+      exact neg_mem hxr
     · rw [Complex.neg_im]
-      exact Subfield.neg_mem _ hxi
+      exact neg_mem hxi
   · intro x ⟨hxr, hxi⟩
-    have hnorm : Complex.normSq x ∈ ↑(constructibleClosure
-        ↥(Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) := by
+    have hnorm : Complex.normSq x ∈ (constructibleClosure
+        (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) := by
       rw [Complex.normSq_apply]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hxr
-      · exact Subfield.mul_mem _ hxi hxi
+      apply add_mem
+      · exact mul_mem hxr hxr
+      · exact mul_mem hxi hxi
     constructor
     · rw [Complex.inv_re]
-      exact Subfield.div_mem _ hxr hnorm
+      exact div_mem hxr hnorm
     · rw [Complex.inv_im]
-      exact Subfield.div_mem _ (Subfield.neg_mem _ hxi) hnorm
+      exact div_mem (neg_mem hxi) hnorm
   · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
     constructor
     · rw [Complex.mul_re]
-      apply Subfield.sub_mem
-      · exact Subfield.mul_mem _ hxr hyr
-      · exact Subfield.mul_mem _ hxi hyi
+      apply sub_mem
+      · exact mul_mem hxr hyr
+      · exact mul_mem hxi hyi
     · rw [Complex.mul_im]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hyi
-      · exact Subfield.mul_mem _ hxi hyr
+      apply add_mem
+      · exact mul_mem hxr hyi
+      · exact mul_mem hxi hyr
   · intro x ⟨hxr, hxi⟩
     have hnorm : ‖x ^ 2‖ ∈ constructibleClosure
         (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
       apply mem_constructibleClosure_of_sq_mem
       rw [Complex.sq_norm, Complex.normSq_apply]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hxr
-      · exact Subfield.mul_mem _ hxi hxi
+      apply add_mem
+      · exact mul_mem hxr hxr
+      · exact mul_mem hxi hxi
     constructor
     · apply mem_constructibleClosure_of_sq_mem
       rw [Complex.re_sq_of_sq_eq rfl]
-      refine Subfield.div_mem _ ?_ (by simp)
-      exact Subfield.add_mem _ hnorm hxr
+      refine div_mem ?_ (by simp)
+      exact add_mem hnorm hxr
     · apply mem_constructibleClosure_of_sq_mem
       rw [Complex.im_sq_of_sq_eq rfl]
-      refine Subfield.div_mem _ ?_ (by simp)
-      exact Subfield.sub_mem _ hnorm hxr
+      refine div_mem ?_ (by simp)
+      exact sub_mem hnorm hxr
 
+theorem mem_constructibleClosure_of_real {s : Set ℂ} (h : ∀ x ∈ s, conj x ∈ s) {x : ℝ}
+    (hx : x ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) :
+    (x : ℂ) ∈ constructibleClosure (Subfield.closure s) ℂ := by
+  revert hx
+  apply constructibleClosure_closure_induction
+  · simp
+  · intro x hx
+    simp only [Set.mem_union, Set.mem_image] at hx
+    obtain ⟨y, hy, rfl⟩ | ⟨y, hy, rfl⟩ := hx
+    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+      refine ⟨⟨y.re, ?_⟩, by simp [Subfield.algebraMap_ofSubfield]⟩
+      rw [Complex.re_eq_add_conj]
+      refine div_mem ?_ (by simp)
+      apply add_mem (Subfield.mem_closure_of_mem hy)
+      exact Subfield.mem_closure_of_mem (h y hy)
+    · rw [Complex.im_eq_sub_conj]
+      apply div_mem
+      · apply sub_mem
+        · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+          rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+          exact ⟨⟨y, Subfield.mem_closure_of_mem hy⟩, by simp [Subfield.algebraMap_ofSubfield]⟩
+        · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+          rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+          exact ⟨⟨star y, Subfield.mem_closure_of_mem (h y hy)⟩,
+            by simp [Subfield.algebraMap_ofSubfield]⟩
+      · apply mul_mem (by simp)
+        apply mem_constructibleClosure_of_sq_mem
+        simp
+  · simp
+  · intro x y hx hy
+    simpa using add_mem hx hy
+  · intro x hx
+    simpa using neg_mem hx
+  · intro x hx
+    simpa using inv_mem hx
+  · intro x y hx hy
+    simpa using mul_mem hx hy
+  · intro x hx
+    apply mem_constructibleClosure_of_sq_mem
+    simpa using hx
 
-theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, star x ∈ s)
-    {x : ℂ} :
+theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, conj x ∈ s) {x : ℂ} :
     x ∈ constructibleClosure (Subfield.closure s) ℂ ↔
-      ({x.re, x.im} : Set ℝ) ⊆
-      constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ where
+    x.re ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ ∧
+    x.im ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ where
   mp := re_im_subset_constructibleClosure
-  mpr h := by
+  mpr hx := by
     rw [← Complex.re_add_im x]
-    revert h
-    rw [Set.pair_subset_iff]
-    simp only [SetLike.mem_coe, and_imp]
-    generalize x.re = a
-    generalize x.im = b
-    apply constructibleClosure_closure_induction
-    · simp
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-
+    apply add_mem
+    · exact mem_constructibleClosure_of_real h hx.1
+    · apply mul_mem
+      · exact mem_constructibleClosure_of_real h hx.2
+      · apply mem_constructibleClosure_of_sq_mem
+        simp
 
 namespace EuclideanGeometry
 
