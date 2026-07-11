@@ -158,7 +158,7 @@ match hf with
   apply extension _ _ he hef h
   apply IsIteratedQuadraticExtension.induction P bot extension he
 
-theorem IsIteratedQuadraticExtension.mem_induction [h2 : NeZero (2 : L)]
+theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
     (P : L → Prop)
     (bot : ∀ x : K, P (algebraMap K L x))
     (add : ∀ x y, P x → P y → P (x + y))
@@ -173,7 +173,7 @@ theorem IsIteratedQuadraticExtension.mem_induction [h2 : NeZero (2 : L)]
     apply bot
   refine IsIteratedQuadraticExtension.induction (fun f ↦ ∀ x ∈ f, P x) hbot ?_ hf
   intro f g hf hfg hg ih
-  suffices ∀ x ∈ (⊤ : IntermediateField f (IntermediateField.extendScalars hfg)), P x by
+  suffices ∀ x ∈ (⊤ : IntermediateField ↥f ↥(IntermediateField.extendScalars hfg)), P x by
     intro x hx
     apply this ⟨x, by simpa using hx⟩
     simp
@@ -203,8 +203,7 @@ theorem IsIteratedQuadraticExtension.mem_induction [h2 : NeZero (2 : L)]
       suffices (1 + 1) * Polynomial.X + Polynomial.C r ≠ 0 by simpa [h]
       rw [show (1 + 1) = (2 : Polynomial ↥f) by norm_num]
       intro h
-      obtain h2 := h2.out
-      contrapose h2
+      contrapose h0
       obtain h := congr((Polynomial.coeff $h 1))
       have h : (2 : f) = 0 := by simpa using h
       obtain h := congr(($h).val)
@@ -248,7 +247,7 @@ theorem IsIteratedQuadraticExtension.mem_induction [h2 : NeZero (2 : L)]
         exact ih _ (r ^ 2 - 4 * s).prop
       have : a.val = 2⁻¹ * (2 * a.val + r.val + (-1) * r.val) := by
         rw [neg_one_mul, ← sub_eq_add_neg, add_sub_cancel_right]
-        rw [inv_mul_cancel_left₀ h2.out]
+        rw [inv_mul_cancel_left₀ h0]
       rw [this]
       apply mul
       · apply inv
@@ -393,7 +392,7 @@ theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructible
   · apply IntermediateField.mem_adjoin_of_mem
     simp
 
-theorem constructibleClosure_induction [h2 : NeZero (2 : L)]
+theorem constructibleClosure_induction (h0 : (2 : L) ≠ 0)
     (P : L → Prop)
     (bot : ∀ x : K, P (algebraMap K L x))
     (add : ∀ x y, P x → P y → P (x + y))
@@ -404,9 +403,9 @@ theorem constructibleClosure_induction [h2 : NeZero (2 : L)]
   intro x hx
   rw [mem_constructibleClosure] at hx
   obtain ⟨f, hf, hx⟩ := hx
-  exact hf.mem_induction P bot add inv mul sqrt x hx
+  exact hf.mem_induction h0 P bot add inv mul sqrt x hx
 
-theorem constructibleClosure_closure_induction [h2 : NeZero (2 : L)] {s : Set L}
+theorem constructibleClosure_closure_induction (h0 : (2 : L) ≠ 0) {s : Set L}
     {P : L → Prop}
     (mem : ∀ x ∈ s, P x)
     (one : P 1)
@@ -416,7 +415,7 @@ theorem constructibleClosure_closure_induction [h2 : NeZero (2 : L)] {s : Set L}
     (mul : ∀ x y, P x → P y → P (x * y))
     (sqrt : ∀ x, P (x ^ 2) → P x) :
     ∀ x ∈ constructibleClosure (Subfield.closure s) L, P x := by
-  refine constructibleClosure_induction P ?_ add inv mul sqrt
+  refine constructibleClosure_induction h0 P ?_ add inv mul sqrt
   intro x
   obtain ⟨x, hx⟩ := x
   induction hx using Subfield.closure_induction with
@@ -432,355 +431,6 @@ theorem constructibleClosure_closure_induction [h2 : NeZero (2 : L)] {s : Set L}
     exact inv x hpx
   | mul x y hx hy hpx hpy =>
     exact mul x y hpx hpy
-
-
-section StarField
-
-variable (R : Type*) [CommRing R] [StarRing R] [TrivialStar R]
-  {A : Type*} [CommRing A] [StarRing A] [Algebra R A] [StarModule R A]
-
-theorem skewAdjoint_mul_skewAdjoint {a b : A} (ha : a ∈ skewAdjoint A) (hb : b ∈ skewAdjoint A) :
-    a * b ∈ selfAdjoint A := by
-  simpa [selfAdjoint] using isSelfAdjoint_smul_of_mem_skewAdjoint ha hb
-
-theorem skewAdjoint_mul_selfAdjoint {a b : A} (ha : a ∈ skewAdjoint A) (hb : b ∈ selfAdjoint A) :
-    a * b ∈ skewAdjoint A := by
-  simpa using IsSelfAdjoint.smul_mem_skewAdjoint ha hb
-
-theorem selfAdjoint_mul_skewAdjoint {a b : A} (ha : a ∈ selfAdjoint A) (hb : b ∈ skewAdjoint A) :
-    a * b ∈ skewAdjoint A := by
-  rw [mul_comm]
-  exact skewAdjoint_mul_selfAdjoint hb ha
-
-instance : HMul (skewAdjoint A) (skewAdjoint A) (selfAdjoint A) where
-  hMul a b := ⟨a.val * b.val, skewAdjoint_mul_skewAdjoint a.prop b.prop⟩
-
-@[simp, push_cast]
-theorem coe_skewAdjoint_mul_skewAdjoint (a b : skewAdjoint A) :
-    (a * b).val = a.val * b.val :=
-  rfl
-
-instance : HMul (selfAdjoint A) (skewAdjoint A) (skewAdjoint A) where
-  hMul a b := ⟨a.val * b.val, selfAdjoint_mul_skewAdjoint a.prop b.prop⟩
-
-@[simp, push_cast]
-theorem coe_selfAdjoint_mul_skewAdjoint (a : selfAdjoint A) (b : skewAdjoint A) :
-    (a * b).val = a.val * b.val :=
-  rfl
-
-instance : HMul (skewAdjoint A) (selfAdjoint A) (skewAdjoint A) where
-  hMul a b := ⟨a.val * b.val, skewAdjoint_mul_selfAdjoint a.prop b.prop⟩
-
-@[simp, push_cast]
-theorem coe_skewAdjoint_mul_selfAdjoint (a : skewAdjoint A) (b : selfAdjoint A) :
-    (a * b).val = a.val * b.val :=
-  rfl
-
-theorem selfAdjointPart_skewAdjoint_mul [Invertible (2 : R)]
-    (j : skewAdjoint A) (a : A) :
-    selfAdjointPart R (j * a)  = j * skewAdjointPart R a := by
-  rw [Subtype.ext_iff]
-  simp only [selfAdjointPart_apply_coe, star_mul', skewAdjoint.star_val_eq, neg_mul,
-    Algebra.smul_def, coe_skewAdjoint_mul_skewAdjoint, skewAdjointPart_apply_coe]
-  ring
-
-theorem selfAdjointPart_mul [Invertible (2 : R)] (a b : A) :
-    (selfAdjointPart R (a * b) : A) =
-    selfAdjointPart R a * selfAdjointPart R b + skewAdjointPart R a * skewAdjointPart R b := by
-  simp only [selfAdjointPart_apply_coe, star_mul', Algebra.smul_def, skewAdjointPart_apply_coe]
-  convert_to (algebraMap R A) ⅟2 * (a * b + star a * star b) =
-    (algebraMap R A) ⅟2 * (algebraMap R A 2 * (algebraMap R A) ⅟2 * (a * b + star a * star b))
-  · rw [map_ofNat]
-    ring
-  rw [← map_mul, mul_invOf_self', map_one]
-  ring
-
-theorem selfAdjointPart_mul' [Invertible (2 : R)] (a b : A) :
-    selfAdjointPart R (a * b) =
-    selfAdjointPart R a * selfAdjointPart R b + skewAdjointPart R a * skewAdjointPart R b := by
-  rw [Subtype.ext_iff, selfAdjointPart_mul]
-  simp
-
-theorem skewAdjointPart_mul [Invertible (2 : R)] (a b : A) :
-    (skewAdjointPart R (a * b) : A) =
-    selfAdjointPart R a * skewAdjointPart R b + skewAdjointPart R a * selfAdjointPart R b := by
-  simp only [selfAdjointPart_apply_coe, star_mul', Algebra.smul_def, skewAdjointPart_apply_coe]
-  convert_to (algebraMap R A) ⅟2 * (a * b - star a * star b) =
-    (algebraMap R A) ⅟2 * (algebraMap R A 2 * (algebraMap R A) ⅟2 * (a * b - star a * star b))
-  · rw [map_ofNat]
-    ring
-  rw [← map_mul, mul_invOf_self', map_one]
-  ring
-
-theorem skewAdjointPart_mul' [Invertible (2 : R)] (a b : A) :
-    skewAdjointPart R (a * b) =
-    selfAdjointPart R a * skewAdjointPart R b + skewAdjointPart R a * selfAdjointPart R b := by
-  rw [Subtype.ext_iff, skewAdjointPart_mul]
-  simp
-
-theorem skewAdjointPart_mul_j [Invertible (2 : R)] (j : skewAdjoint A) (a b : A) :
-    j * skewAdjointPart R (a * b) =
-    selfAdjointPart R a * (j * skewAdjointPart R b) +
-    (j * skewAdjointPart R a) * selfAdjointPart R b := by
-  rw [Subtype.ext_iff]
-  push_cast
-  rw [skewAdjointPart_mul]
-  ring_nf
-
-theorem selfAdjointPart_sq [Invertible (2 : R)] (a : A) :
-    (selfAdjointPart R (a ^ 2) : A) = selfAdjointPart R a ^ 2 + skewAdjointPart R a ^ 2 := by
-  rw [sq, selfAdjointPart_mul]
-  ring
-
-theorem selfAdjointPart_sq' [Invertible (2 : R)] (a : A) :
-    selfAdjointPart R (a ^ 2) =
-    selfAdjointPart R a * selfAdjointPart R a + skewAdjointPart R a * skewAdjointPart R a := by
-  rw [sq, selfAdjointPart_mul']
-
-theorem skewAdjointPart_sq [Invertible (2 : R)] (a : A) :
-    (skewAdjointPart R (a ^ 2) : A) = 2 * selfAdjointPart R a * skewAdjointPart R a := by
-  rw [sq, skewAdjointPart_mul]
-  ring
-
-theorem selfAdjointPart_sqrt [Invertible (2 : R)] {a b : A} (h : a ^ 2 = b) :
-    (2 * selfAdjointPart R a ^ 2 - selfAdjointPart R b : A) ^ 2 =
-    selfAdjointPart R b * selfAdjointPart R b - skewAdjointPart R b * skewAdjointPart R b := by
-  simp_rw [← h, selfAdjointPart_sq, skewAdjointPart_sq]
-  ring
-
-theorem selfAdjointPart_sqrt' [Invertible (2 : R)] {a b : A} (h : a ^ 2 = b) :
-    (2 * selfAdjointPart R a ^ 2 - selfAdjointPart R b) ^ 2 =
-    selfAdjointPart R b * selfAdjointPart R b - skewAdjointPart R b * skewAdjointPart R b := by
-  ext
-  push_cast
-  exact selfAdjointPart_sqrt R h
-
-theorem skewAdjointPart_sqrt [Invertible (2 : R)] {a b : A} (h : a ^ 2 = b) :
-    (2 * (skewAdjointPart R a * skewAdjointPart R a) - selfAdjointPart R b : A) ^ 2 =
-    selfAdjointPart R b * selfAdjointPart R b - skewAdjointPart R b * skewAdjointPart R b := by
-  simp_rw [← h, selfAdjointPart_sq, skewAdjointPart_sq]
-  ring
-
-theorem skewAdjointPart_sqrt' [Invertible (2 : R)] {a b : A} (h : a ^ 2 = b) :
-    (2 * (skewAdjointPart R a * skewAdjointPart R a) - selfAdjointPart R b) ^ 2 =
-    selfAdjointPart R b * selfAdjointPart R b - skewAdjointPart R b * skewAdjointPart R b := by
-  ext
-  push_cast
-  exact skewAdjointPart_sqrt R h
-
-
-variable (R : Type*) [CommRing R] [StarRing R] [TrivialStar R]
-  {K : Type*} [Field K] [StarRing K] [Algebra R K] [StarModule R K]
-
-open Pointwise
-
-theorem selfAdjointPart_inv [Invertible (2 : R)] (a : K) :
-    (selfAdjointPart R a⁻¹ : K) =
-    selfAdjointPart R a * (selfAdjointPart R a ^ 2 - skewAdjointPart R a ^ 2 : K)⁻¹ := by
-  by_cases h : a = 0
-  · simp [h]
-  have : star a ≠ 0 := by simpa using h
-  simp only [selfAdjointPart_apply_coe, star_inv₀, Algebra.smul_def, skewAdjointPart_apply_coe]
-  convert_to algebraMap R K ⅟2 * (a⁻¹ + (star a)⁻¹) =
-    algebraMap R K ⅟2 * ((((algebraMap R K 2 * algebraMap R K ⅟2) ^ 2)⁻¹) *
-      (star a * (a * star a)⁻¹ + a * (a * star a)⁻¹))
-  · rw [map_ofNat]
-    ring
-  rw [← map_mul, mul_invOf_self', map_one, one_pow, inv_one, one_mul]
-  congrm _ * (?_ + ?_)
-  · field
-  · field
-
-theorem selfAdjointPart_inv' [Invertible (2 : R)] (a : K) :
-    selfAdjointPart R a⁻¹ = selfAdjointPart R a *
-    (selfAdjointPart R a * selfAdjointPart R a - skewAdjointPart R a * skewAdjointPart R a)⁻¹ := by
-  rw [Subtype.ext_iff, selfAdjointPart_inv]
-  simp_rw [sq]
-  push_cast
-  rfl
-
-theorem skewAdjointPart_inv [Invertible (2 : R)] (a : K) :
-    (skewAdjointPart R a⁻¹ : K) =
-    skewAdjointPart R a * (skewAdjointPart R a ^ 2 - selfAdjointPart R a ^ 2 : K)⁻¹ := by
-  by_cases h : a = 0
-  · simp [h]
-  have : star a ≠ 0 := by simpa using h
-  simp only [selfAdjointPart_apply_coe, star_inv₀, Algebra.smul_def, skewAdjointPart_apply_coe]
-  convert_to algebraMap R K ⅟2 * (a⁻¹ - (star a)⁻¹) =
-    algebraMap R K ⅟2 * (((-(algebraMap R K 2 * algebraMap R K ⅟2) ^ 2)⁻¹) * (-1) *
-      (star a * (a * star a)⁻¹ - a * (a * star a)⁻¹))
-  · rw [map_ofNat]
-    ring_nf
-  rw [← map_mul, mul_invOf_self', map_one, one_pow, inv_neg_one, neg_one_mul, neg_neg, one_mul]
-  congrm _ * (?_ - ?_)
-  · field
-  · field
-
-theorem skewAdjointPart_inv' [Invertible (2 : R)] (a : K) :
-    skewAdjointPart R a⁻¹ = skewAdjointPart R a *
-    (skewAdjointPart R a * skewAdjointPart R a - selfAdjointPart R a * selfAdjointPart R a)⁻¹ := by
-  rw [Subtype.ext_iff, skewAdjointPart_inv]
-  simp_rw [sq]
-  push_cast
-  rfl
-
-theorem skewAdjointPart_inv_j [Invertible (2 : R)] (j : skewAdjoint K) (a : K) :
-    j * skewAdjointPart R a⁻¹ = j * skewAdjointPart R a *
-    (skewAdjointPart R a * skewAdjointPart R a - selfAdjointPart R a * selfAdjointPart R a)⁻¹ := by
-  rw [Subtype.ext_iff]
-  push_cast
-  rw [ skewAdjointPart_inv]
-  ring
-
-theorem sefAdjointPart_skewAdjointPart_mem_constructibleClosure
-    [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
-    {j : skewAdjoint K} (hj0 : j ≠ 0)
-    (hj : j * j ∈ constructibleClosure
-      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K))
-    {x : K}
-    (h : x ∈ constructibleClosure (Subfield.closure s) K) :
-    selfAdjointPart R x ∈ constructibleClosure
-      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K) ∧
-    j * skewAdjointPart R x ∈ constructibleClosure
-      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K) := by
-  have hSkewMul {a b : skewAdjoint K}
-      (ha : j * a ∈ constructibleClosure
-        (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K))
-      (hb : j * b ∈ constructibleClosure
-        (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K)) :
-      a * b ∈ constructibleClosure
-        (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K) := by
-    have hmul := Subfield.mul_mem _ ha hb
-    have : (j * a) * (j * b) = (j * j) * (a * b) := by
-      ext
-      push_cast
-      ring
-    rw [this] at hmul
-    have hmulmul := Subfield.mul_mem _ (Subfield.inv_mem _ hj) hmul
-    have hjj : (j * j)⁻¹ * (j * j) = 1 := by
-      ext
-      push_cast
-      rw [inv_mul_cancel₀]
-      simpa using hj0
-    rw [← mul_assoc, hjj, one_mul] at hmulmul
-    exact hmulmul
-  revert h
-  have hr0 : NeZero (2 : R) := inferInstance
-  have hk0 : NeZero (2 : K) := ⟨by
-    suffices algebraMap R K 2 ≠ 0 by
-      rw [map_ofNat] at this
-      exact this
-    simpa using hr0.out
-  ⟩
-  have hsk0 : (2 : selfAdjoint K) ≠ 0 := by
-    rw [Subtype.ext_iff.ne]
-    exact hk0.out
-  apply constructibleClosure_closure_induction
-  · intro x hx
-    constructor
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨selfAdjointPart R x, ?_⟩, ?_⟩
-      · apply Subfield.mem_closure_of_mem
-        grind
-      · simp [Subfield.algebraMap_ofSubfield]
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨j * skewAdjointPart R x, ?_⟩, ?_⟩
-      · apply Subfield.mem_closure_of_mem
-        simp only [Set.mem_image]
-        refine ⟨j * x, ?_, ?_⟩
-        · apply Set.mem_union_right
-          exact Set.smul_mem_smul_set hx
-        · rw [Subtype.ext_iff]
-          rw [selfAdjointPart_skewAdjoint_mul R j]
-      · simp [Subfield.algebraMap_ofSubfield]
-  · constructor
-    · suffices (selfAdjointPart R) (1 : K) = 1 by simp [this]
-      ext
-      simp
-    · suffices j * (skewAdjointPart R) (1 : K) = (0 : selfAdjoint K) by simp [this]
-      ext
-      simp
-  · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
-    constructor
-    · rw [map_add]
-      exact Subfield.add_mem _ hxr hyr
-    · rw [map_add]
-      convert! Subfield.add_mem _ hxi hyi
-      ext
-      push_cast
-      ring
-  · intro x ⟨hxr, hxi⟩
-    constructor
-    · rw [map_neg]
-      exact Subfield.neg_mem _ hxr
-    · rw [map_neg]
-      convert! Subfield.neg_mem _ hxi
-      ext
-      push_cast
-      ring
-  · intro x ⟨hxr, hxi⟩
-    constructor
-    · rw [selfAdjointPart_inv']
-      apply Subfield.mul_mem
-      · exact hxr
-      · apply Subfield.inv_mem
-        apply Subfield.sub_mem
-        · exact Subfield.mul_mem _ hxr hxr
-        · exact hSkewMul hxi hxi
-    · rw [skewAdjointPart_inv_j]
-      apply Subfield.mul_mem
-      · exact hxi
-      · apply Subfield.inv_mem
-        apply Subfield.sub_mem
-        · exact hSkewMul hxi hxi
-        · exact Subfield.mul_mem _ hxr hxr
-  · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
-    constructor
-    · rw [selfAdjointPart_mul']
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hyr
-      · exact hSkewMul hxi hyi
-    · rw [skewAdjointPart_mul_j]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hyi
-      · exact Subfield.mul_mem _ hxi hyr
-  · intro x ⟨hxr, hxi⟩
-    have hmem : (selfAdjointPart R) (x ^ 2) * (selfAdjointPart R) (x ^ 2) -
-        (skewAdjointPart R) (x ^ 2) * (skewAdjointPart R) (x ^ 2) ∈ constructibleClosure
-        (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K) := by
-      apply Subfield.sub_mem
-      · exact Subfield.mul_mem _ hxr hxr
-      · exact hSkewMul hxi hxi
-    constructor
-    · rw [← selfAdjointPart_sqrt' R rfl] at hmem
-      have hmem := mem_constructibleClosure_of_sq_mem hmem
-      apply mem_constructibleClosure_of_sq_mem
-      have hrw : (selfAdjointPart R) x ^ 2  =
-          2⁻¹ * (2 * (selfAdjointPart R) x ^ 2 - (selfAdjointPart R) (x ^ 2) +
-          (selfAdjointPart R) (x ^ 2)) := by
-        rw [sub_add_cancel, inv_mul_cancel_left₀ hsk0]
-      rw [hrw]
-      apply Subfield.mul_mem _ (by simp)
-      exact Subfield.add_mem _ hmem hxr
-    · rw [← skewAdjointPart_sqrt' R rfl] at hmem
-      have hmem := mem_constructibleClosure_of_sq_mem hmem
-      apply mem_constructibleClosure_of_sq_mem
-      have hrw : (j * (skewAdjointPart R) x) ^ 2 =
-        (j * j) * (2⁻¹ * (2 * ((skewAdjointPart R) x * (skewAdjointPart R) x)
-          - (selfAdjointPart R) (x ^ 2)
-          + (selfAdjointPart R) (x ^ 2))) := by
-        rw [sub_add_cancel, inv_mul_cancel_left₀ hsk0]
-        ext
-        push_cast
-        ring
-      rw [hrw]
-      apply Subfield.mul_mem _ hj
-      apply Subfield.mul_mem _ (by simp)
-      exact Subfield.add_mem _ hmem hxr
-
-end StarField
 
 open Polynomial in
 theorem Complex.sq_eq_iff {a b : ℂ} :
@@ -851,6 +501,7 @@ theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
   revert h
   rw [Set.pair_subset_iff]
   apply constructibleClosure_closure_induction
+  · simp
   · intro x hx
     constructor
     · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
@@ -941,6 +592,7 @@ theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, sta
     generalize x.re = a
     generalize x.im = b
     apply constructibleClosure_closure_induction
+    · simp
     · sorry
     · sorry
     · sorry
