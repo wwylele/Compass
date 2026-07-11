@@ -632,7 +632,7 @@ theorem skewAdjointPart_inv_j [Invertible (2 : R)] (j : skewAdjoint K) (a : K) :
   rw [ skewAdjointPart_inv]
   ring
 
-theorem sefAdjointPart_skewAdjointPart_mem_constructibleClosure
+theorem selfAdjointPart_skewAdjointPart_mem_constructibleClosure
     [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
     {j : skewAdjoint K} (hj0 : j ≠ 0)
     (hj : j * j ∈ constructibleClosure
@@ -780,175 +780,185 @@ theorem sefAdjointPart_skewAdjointPart_mem_constructibleClosure
       apply Subfield.mul_mem _ (by simp)
       exact Subfield.add_mem _ hmem hxr
 
-end StarField
+theorem selfAdjointPart_mem_constructibleClosure
+    [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
+    {j : skewAdjoint K} (hj0 : j ≠ 0)
+    (hj : j * j ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K))
+    {x : K}
+    (h : x ∈ constructibleClosure (Subfield.closure s) K) :
+    selfAdjointPart R x ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K) :=
+  (selfAdjointPart_skewAdjointPart_mem_constructibleClosure R hj0 hj h).1
 
-open Polynomial in
-theorem Complex.sq_eq_iff {a b : ℂ} :
-    a ^ 2 = b ↔ a = Complex.sqrt b ∨ a = -Complex.sqrt b where
-  mp h := by
-    let p : Polynomial ℂ := C 1 * X ^ 2 + C 0 * X + C (-b)
-    have hp0 : p ≠ 0 := by
-      intro h
-      obtain h := congr(Polynomial.coeff $h 2)
-      simp [p] at h
-    have hp : a ∈ p.roots := by
-      rw [mem_roots hp0]
-      simp [p, h]
-    suffices p.roots = {b.sqrt, -b.sqrt} by
-      simpa [this] using hp
-    rw [Polynomial.roots_quadratic_eq_pair_iff_of_ne_zero' (by simp)]
-    suffices b.sqrt * b.sqrt = b by simpa
-    rw [← sq, sqrt]
-    simp
-  mpr h := by
-    rcases h with h | h
-    · simp [h, Complex.sqrt]
-    · simp [h, Complex.sqrt]
+theorem skew_mem_constructibleClosure
+    [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
+    {j : skewAdjoint K} (hj0 : j ≠ 0)
+    (hj : j * j ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K))
+    {x : K}
+    (h : x ∈ constructibleClosure (Subfield.closure s) K) :
+    j * skewAdjointPart R x ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K) :=
+  (selfAdjointPart_skewAdjointPart_mem_constructibleClosure R hj0 hj h).2
 
-theorem Complex.sqrt_eq_real_add_ite' {a : ℂ} :
-    a.sqrt = √((‖a‖ + a.re) / 2) +
-    ((if 0 ≤ a.im then 1 else -1) * √((‖a‖ - a.re) / 2) : ℝ) * I := by
-  convert Complex.sqrt_eq_real_add_ite
-  split_ifs
-  all_goals
-  norm_cast
-
-theorem Complex.re_sq_of_sq_eq {a b : ℂ} (h : a ^ 2 = b) :
-    a.re ^ 2 = (‖b‖ + b.re) / 2 := by
-  rw [Complex.sq_eq_iff] at h
-  have : b.sqrt.re ^ 2 = (‖b‖ + b.re) / 2 := by
-    rw [Complex.sqrt_eq_real_add_ite', Complex.add_re]
-    rw [Complex.ofReal_re, Complex.mul_I_re, Complex.ofReal_im, neg_zero, add_zero]
-    rw [Real.sq_sqrt]
-    refine div_nonneg ?_ (by simp)
-    simpa [neg_le_iff_add_nonneg] using Complex.re_le_norm (-b)
-  rcases h with h | h
-  · rw [h]
-    exact this
-  · rw [h, Complex.neg_re, neg_sq]
-    exact this
-
-theorem Complex.im_sq_of_sq_eq {a b : ℂ} (h : a ^ 2 = b) :
-    a.im ^ 2 = (‖b‖ - b.re) / 2 := by
-  rw [Complex.sq_eq_iff] at h
-  have : b.sqrt.im ^ 2 = (‖b‖ - b.re) / 2 := by
-    rw [Complex.sqrt_eq_real_add_ite', Complex.add_im]
-    rw [Complex.ofReal_im, Complex.mul_I_im, Complex.ofReal_re, zero_add,
-      mul_pow, ite_pow, Real.sq_sqrt]
-    · simp
-    refine div_nonneg ?_ (by simp)
-    simpa using Complex.re_le_norm b
-  rcases h with h | h
-  · rw [h]
-    exact this
-  · rw [h, Complex.neg_im, neg_sq]
-    exact this
-
-theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
-    (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
-    ({x.re, x.im} : Set ℝ) ⊆
-      constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+theorem mem_constructibleClosure_of_selfAdjoint
+    [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
+    (hs : ∀ x ∈ s, star x ∈ s)
+    {j : skewAdjoint K}
+    (hj : j.val ∈ constructibleClosure (Subfield.closure s) K)
+    {x : selfAdjoint K}
+    (h : x ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K)) :
+    x.val ∈ constructibleClosure (Subfield.closure s) K := by
   revert h
-  rw [Set.pair_subset_iff]
+  have hr0 : NeZero (2 : R) := inferInstance
+  have hk0 : NeZero (2 : K) := ⟨by
+    suffices algebraMap R K 2 ≠ 0 by
+      rw [map_ofNat] at this
+      exact this
+    simpa using hr0.out
+  ⟩
+  have hsk0 : NeZero (2 : selfAdjoint K) := ⟨by
+    rw [Subtype.ext_iff.ne]
+    exact hk0.out⟩
   apply constructibleClosure_closure_induction
   · intro x hx
-    constructor
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+    rw [Set.image_union, Set.mem_union] at hx
+    have h2 : (algebraMap R K) ⅟2  ∈ constructibleClosure (Subfield.closure s) K := by
+      suffices (algebraMap R K) ⅟2 = 2⁻¹ by
+        simp [this]
+      rw [← mul_eq_one_iff_eq_inv₀ hk0.out]
+      suffices (algebraMap R K) ⅟2 * (algebraMap R K) 2 = 1 by
+        simpa [map_ofNat]
+      rw [← map_mul]
+      simp
+    have hleft {a : K} (ha : a ∈ s) : a ∈ constructibleClosure (Subfield.closure s) K := by
+      refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
       rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨x.re, ?_⟩, ?_⟩
-      · apply Subfield.mem_closure_of_mem
-        grind
+      refine ⟨⟨a, ?_⟩, ?_⟩
+      · exact Subfield.mem_closure_of_mem ha
       · simp [Subfield.algebraMap_ofSubfield]
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+    have hright {a : K} (ha : a ∈ s) : star a ∈ constructibleClosure (Subfield.closure s) K := by
+      refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
       rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨x.im, ?_⟩, ?_⟩
-      · apply Subfield.mem_closure_of_mem
-        grind
+      refine ⟨⟨star a, ?_⟩, ?_⟩
+      · exact Subfield.mem_closure_of_mem (hs a ha)
       · simp [Subfield.algebraMap_ofSubfield]
-  · constructor
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨1, by simp⟩, ?_⟩
-      simp [Subtype.ext_iff]
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨0, by simp⟩, ?_⟩
-      simp [Subtype.ext_iff]
-  · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
-    constructor
-    · rw [Complex.add_re]
-      exact Subfield.add_mem _ hxr hyr
-    · rw [Complex.add_im]
-      exact Subfield.add_mem _ hxi hyi
-  · intro x ⟨hxr, hxi⟩
-    constructor
-    · rw [Complex.neg_re]
-      exact Subfield.neg_mem _ hxr
-    · rw [Complex.neg_im]
-      exact Subfield.neg_mem _ hxi
-  · intro x ⟨hxr, hxi⟩
-    have hnorm : Complex.normSq x ∈ ↑(constructibleClosure
-        ↥(Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) := by
-      rw [Complex.normSq_apply]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hxr
-      · exact Subfield.mul_mem _ hxi hxi
-    constructor
-    · rw [Complex.inv_re]
-      exact Subfield.div_mem _ hxr hnorm
-    · rw [Complex.inv_im]
-      exact Subfield.div_mem _ (Subfield.neg_mem _ hxi) hnorm
-  · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
-    constructor
-    · rw [Complex.mul_re]
-      apply Subfield.sub_mem
-      · exact Subfield.mul_mem _ hxr hyr
-      · exact Subfield.mul_mem _ hxi hyi
-    · rw [Complex.mul_im]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hyi
-      · exact Subfield.mul_mem _ hxi hyr
-  · intro x ⟨hxr, hxi⟩
-    have hnorm : ‖x ^ 2‖ ∈ constructibleClosure
-        (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+    rcases hx with hx | hx
+    · rw [Set.mem_image] at hx
+      obtain ⟨a, ha, rfl⟩ := hx
+      rw [selfAdjointPart_apply_coe, Algebra.smul_def]
+      apply Subfield.mul_mem _ h2
+      exact Subfield.add_mem _ (hleft ha) (hright ha)
+    · have h : ∃ a ∈ s, (selfAdjointPart R) (j • a) = x := by
+        simpa [Set.mem_smul_set] using hx
+      obtain ⟨a, ha, rfl⟩ := h
+      change (selfAdjointPart R (j * a)).val ∈ constructibleClosure (↥(Subfield.closure s)) K
+      rw [selfAdjointPart_skewAdjoint_mul]
+      push_cast
       apply mem_constructibleClosure_of_sq_mem
-      rw [Complex.sq_norm, Complex.normSq_apply]
-      apply Subfield.add_mem
-      · exact Subfield.mul_mem _ hxr hxr
-      · exact Subfield.mul_mem _ hxi hxi
-    constructor
-    · apply mem_constructibleClosure_of_sq_mem
-      rw [Complex.re_sq_of_sq_eq rfl]
-      refine Subfield.div_mem _ ?_ (by simp)
-      exact Subfield.add_mem _ hnorm hxr
-    · apply mem_constructibleClosure_of_sq_mem
-      rw [Complex.im_sq_of_sq_eq rfl]
-      refine Subfield.div_mem _ ?_ (by simp)
-      exact Subfield.sub_mem _ hnorm hxr
+      rw [show (j.val * ((skewAdjointPart R) a).val) ^ 2 =
+          (j * j).val * ((skewAdjointPart R) a).val ^ 2 by
+        push_cast
+        ring]
+      apply Subfield.mul_mem
+      · exact Subfield.mul_mem _ hj hj
+      · apply Subfield.pow_mem
+        rw [skewAdjointPart_apply_coe, Algebra.smul_def]
+        apply Subfield.mul_mem _ h2
+        exact Subfield.sub_mem _ (hleft ha) (hright ha)
+  · simp
+  · intro x y hx hy
+    exact Subfield.add_mem _ hx hy
+  · intro x hx
+    exact Subfield.neg_mem _ hx
+  · intro x hx
+    exact Subfield.inv_mem _ hx
+  · intro x y hx hy
+    exact Subfield.mul_mem _ hx hy
+  · intro x hx
+    apply mem_constructibleClosure_of_sq_mem
+    simpa using hx
+
+theorem mem_constructibleClosure_of_skewAjoint
+    [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
+    (hs : ∀ x ∈ s, star x ∈ s)
+    {j : skewAdjoint K} (hj0 : j ≠ 0)
+    (hj : j.val ∈ constructibleClosure (Subfield.closure s) K)
+    {x : skewAdjoint K}
+    (h : j * x ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K)) :
+    x.val ∈ constructibleClosure (Subfield.closure s) K := by
+  convert! Subfield.mul_mem _ (Subfield.inv_mem _ hj) <|
+    mem_constructibleClosure_of_selfAdjoint R hs hj h
+  push_cast
+  rw [inv_mul_cancel_left₀ (by simpa using hj0)]
+
+theorem skewAdjoint_mem_constructibleClosure
+    [Nontrivial R] [Invertible (2 : R)] [FaithfulSMul R K] {s : Set K}
+    (hs : ∀ x ∈ s, star x ∈ s)
+    {j : skewAdjoint K} (hj0 : j ≠ 0)
+    (hj : j.val ∈ constructibleClosure (Subfield.closure s) K)
+    {x : K}
+    (hxr : selfAdjointPart R x ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K))
+    (hxi : j * skewAdjointPart R x ∈ constructibleClosure
+      (Subfield.closure (selfAdjointPart R '' (s ∪ j • s))) (selfAdjoint K)) :
+    x ∈ constructibleClosure (Subfield.closure s) K := by
+  rw [← StarModule.selfAdjointPart_add_skewAdjointPart R x]
+  apply Subfield.add_mem
+  · apply mem_constructibleClosure_of_selfAdjoint R hs hj
+    exact hxr
+  · apply mem_constructibleClosure_of_skewAjoint R hs hj0 hj
+    exact hxi
+
+end StarField
 
 
-theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, star x ∈ s)
-    {x : ℂ} :
-    x ∈ constructibleClosure (Subfield.closure s) ℂ ↔
-      ({x.re, x.im} : Set ℝ) ⊆
-      constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ where
-  mp := re_im_subset_constructibleClosure
-  mpr h := by
-    rw [← Complex.re_add_im x]
-    revert h
-    rw [Set.pair_subset_iff]
-    simp only [SetLike.mem_coe, and_imp]
-    generalize x.re = a
-    generalize x.im = b
-    apply constructibleClosure_closure_induction
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-    · sorry
-    · sorry
+def Complex.selfAdjointRingEquiv : selfAdjoint ℂ ≃+* ℝ where
+  __ := Complex.selfAdjointEquiv
+  map_mul' a b := by
+    suffices a.val.im = 0 by simp [this]
+    obtain h := a.prop
+    rw [selfAdjoint.mem_iff] at h
+    obtain h := congr(Complex.im $h)
+    rw [Complex.star_def, Complex.conj_im, neg_eq_iff_add_eq_zero] at h
+    simpa using h
 
+@[simp]
+theorem Complex.selfAdjointRingEquiv_symm_apply (x : ℝ) :
+    Complex.selfAdjointRingEquiv.symm x = ⟨x, by simp [selfAdjoint.mem_iff]⟩ := rfl
+
+@[simp]
+theorem Complex.selfAdjointRingEquiv_apply (x : selfAdjoint ℂ) :
+    Complex.selfAdjointRingEquiv x = x.val.re := rfl
+
+@[simp]
+theorem Complex.selfAdjointRingEquiv_apply_selfAdjointPart (x : ℂ) :
+    Complex.selfAdjointRingEquiv (selfAdjointPart ℝ x) = x.re := by
+  simp
+  ring
+
+open Pointwise
+
+theorem re_im_mem_constructibleClosure {x : ℂ} {s : Set ℂ}
+    (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
+    x.re ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ ∧
+    x.im ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+  let j : skewAdjoint ℂ := ⟨-Complex.I, by simp [skewAdjoint.mem_iff]⟩
+  have hjj : j * j = (-1 : selfAdjoint ℂ) := by
+    ext
+    simp [j]
+  obtain h' := selfAdjointPart_skewAdjointPart_mem_constructibleClosure ℝ
+    (j := j) (by simp [j]) (by simp [hjj]) h
+  constructor
+  · obtain h' := Set.mem_image_of_mem Complex.selfAdjointRingEquiv h'.1
+    rw [Complex.selfAdjointRingEquiv_apply_selfAdjointPart] at h'
+    --convert h'
+
+    sorry
+  · sorry
 
 namespace EuclideanGeometry
 
