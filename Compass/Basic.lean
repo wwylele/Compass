@@ -352,6 +352,12 @@ theorem mem_constructibleClosure {x : L} :
     apply le_iSup_of_le f
     simp [hf]
 
+theorem mem_constructibleClosure_of_mem_subfield {x : L} {K : Subfield L} (h : x ∈ K) :
+    x ∈ constructibleClosure K L := by
+  refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+  rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+  exact ⟨⟨x, h⟩, (by simp [Subfield.algebraMap_ofSubfield])⟩
+
 theorem star_mem_constructibleClosure [StarRing K] [StarRing L] [StarModule K L]
     {x : L} (hx : x ∈ constructibleClosure K L) :
     star x ∈ constructibleClosure K L := by
@@ -505,27 +511,17 @@ theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
   · simp
   · intro x hx
     constructor
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨x.re, ?_⟩, ?_⟩
-      · apply Subfield.mem_closure_of_mem
-        grind
-      · simp [Subfield.algebraMap_ofSubfield]
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨x.im, ?_⟩, ?_⟩
-      · apply Subfield.mem_closure_of_mem
-        grind
-      · simp [Subfield.algebraMap_ofSubfield]
+    · apply mem_constructibleClosure_of_mem_subfield
+      apply Subfield.mem_closure_of_mem
+      grind
+    · apply mem_constructibleClosure_of_mem_subfield
+      apply Subfield.mem_closure_of_mem
+      grind
   · constructor
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨1, by simp⟩, ?_⟩
-      simp [Subtype.ext_iff]
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨0, by simp⟩, ?_⟩
-      simp [Subtype.ext_iff]
+    · apply mem_constructibleClosure_of_mem_subfield
+      simp
+    · apply mem_constructibleClosure_of_mem_subfield
+      simp
   · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
     constructor
     · rw [Complex.add_re]
@@ -587,9 +583,7 @@ theorem mem_constructibleClosure_of_real {s : Set ℂ} (h : ∀ x ∈ s, conj x 
   · intro x hx
     simp only [Set.mem_union, Set.mem_image] at hx
     obtain ⟨y, hy, rfl⟩ | ⟨y, hy, rfl⟩ := hx
-    · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-      rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-      refine ⟨⟨y.re, ?_⟩, by simp [Subfield.algebraMap_ofSubfield]⟩
+    · apply mem_constructibleClosure_of_mem_subfield
       rw [Complex.re_eq_add_conj]
       refine div_mem ?_ (by simp)
       apply add_mem (Subfield.mem_closure_of_mem hy)
@@ -597,13 +591,10 @@ theorem mem_constructibleClosure_of_real {s : Set ℂ} (h : ∀ x ∈ s, conj x 
     · rw [Complex.im_eq_sub_conj]
       apply div_mem
       · apply sub_mem
-        · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-          rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-          exact ⟨⟨y, Subfield.mem_closure_of_mem hy⟩, by simp [Subfield.algebraMap_ofSubfield]⟩
-        · refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-          rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-          exact ⟨⟨star y, Subfield.mem_closure_of_mem (h y hy)⟩,
-            by simp [Subfield.algebraMap_ofSubfield]⟩
+        · apply mem_constructibleClosure_of_mem_subfield
+          exact Subfield.mem_closure_of_mem hy
+        · apply mem_constructibleClosure_of_mem_subfield
+          exact Subfield.mem_closure_of_mem (h y hy)
       · apply mul_mem (by simp)
         apply mem_constructibleClosure_of_sq_mem
         simp
@@ -728,6 +719,136 @@ end
 
 instance : Fact (Module.finrank ℝ ℂ = 2) := ⟨Complex.finrank_real_complex⟩
 
+theorem system_two_x {x y a b c d e f : ℝ}
+    (h1 : x ^ 2 + a * x + y ^ 2 + b * y = c)
+    (h2 : d * x + e * y = f) :
+    (2 * (d ^ 2 + e ^ 2) * x + (a * e ^ 2 - b * d * e - 2 * d * f)) ^ 2
+      = 4 * (d ^ 2 + e ^ 2) * (e ^ 2 * c - f ^ 2 - b * e * f) +
+      (a * e ^ 2 - b * d * e - 2 * d * f) ^ 2 := by
+  have h2' : e * y = f - d * x := by linear_combination h2
+  have h3 : e ^ 2 * x ^ 2 + e ^ 2 * a * x + (e * y) ^ 2 + e * b * (e * y) = e ^ 2 * c := by
+    linear_combination e ^ 2 * h1
+  rw [h2'] at h3
+  linear_combination 4 * (d ^ 2 + e ^ 2) * h3
+
+theorem system_two_y {x y a b c d e f : ℝ}
+    (h1 : x ^ 2 + a * x + y ^ 2 + b * y = c)
+    (h2 : d * x + e * y = f) :
+    (2 * (d ^ 2 + e ^ 2) * y + (b * d ^ 2 - a * d * e - 2 * e * f)) ^ 2
+      = 4 * (d ^ 2 + e ^ 2) * (d ^ 2 * c - f ^ 2 - a * d * f) +
+      (b * d ^ 2 - a * d * e - 2 * e * f) ^ 2 := by
+  have h1' : y ^ 2 + b * y + x ^ 2 + a * x = c := by linear_combination h1
+  have h2' : e * y + d * x = f := by linear_combination h2
+  linear_combination system_two_x h1' h2'
+
+local notation "Cℝ(" s ")" =>
+  constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ
+
+theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
+    (hinit : ∀ x ∈ initial, conj x ∈ initial) {p : ℂ}
+    (h : ConstructiblePoint initial p) :
+    p ∈ constructibleClosure (Subfield.closure initial) ℂ :=
+  match h with
+  | ConstructiblePoint.given p h => by
+    refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
+    rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
+    exact ⟨⟨p, Subfield.mem_closure_of_mem h⟩, by simp [Subfield.algebraMap_ofSubfield]⟩
+  | ConstructiblePoint.twoLines l₁ l₂ hl₁ hl₂ h p hpl₁ hpl₂ =>
+    match hl₁ with
+    | ConstructibleLine.twoPoints a b ha hb hab l₁ hal hbl hl₁ =>
+    match hl₂ with
+    | ConstructibleLine.twoPoints c d hc hd hcd l₂ hcl hdl hl₂ => by
+      have ha := Constructible.mem_constructibleClosure hinit ha
+      have hb := Constructible.mem_constructibleClosure hinit hb
+      have hc := Constructible.mem_constructibleClosure hinit hc
+      have hd := Constructible.mem_constructibleClosure hinit hd
+      have habp : Collinear ℝ {a, b, p} := by
+        rw [collinear_iff_finrank_le_one, ← hl₁, ← direction_affineSpan]
+        apply Submodule.finrank_mono
+        apply AffineSubspace.direction_le
+        apply affineSpan_le_of_subset_coe
+        grind [SetLike.mem_coe]
+      have hcdp : Collinear ℝ {c, d, p} := by
+        rw [collinear_iff_finrank_le_one, ← hl₂, ← direction_affineSpan]
+        apply Submodule.finrank_mono
+        apply AffineSubspace.direction_le
+        apply affineSpan_le_of_subset_coe
+        grind [SetLike.mem_coe]
+      rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ha hb hc hd
+      constructor
+      · apply mem_constructibleClosure_of_mem_subfield
+        sorry
+      · apply mem_constructibleClosure_of_mem_subfield
+        sorry
+  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo => by
+    sorry
+  | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ =>
+    match ho₁ with
+    | ConstructibleCircle.centerRadius o₁ r₁ ho₁ hr₁ hro₁ =>
+    match ho₂ with
+    | ConstructibleCircle.centerRadius o₂ r₂ ho₂ hr₂ hro₂ => by
+      rw [EuclideanGeometry.mem_sphere, Complex.dist_eq] at hpo₁ hpo₂ hro₁ hro₂
+      have h1 := congr($(hpo₁.trans hro₁.symm) ^ 2)
+      have h2 := congr($(hpo₂.trans hro₂.symm) ^ 2)
+      simp_rw [Complex.sq_norm, Complex.normSq_apply, Complex.sub_re, Complex.sub_im] at h1 h2
+      set a := 2 * (o₁.center.re - o₂.center.re)
+      set b := 2 * (o₁.center.im - o₂.center.im)
+      set c := (r₂.re - o₂.center.re) ^ 2 + (r₂.im - o₂.center.im) ^ 2
+        + o₁.center.re ^ 2 + o₁.center.im ^ 2 +
+        - ((r₁.re - o₁.center.re) ^ 2 + (r₁.im - o₁.center.im) ^ 2
+        + o₂.center.re ^ 2 + o₂.center.im ^ 2)
+      set d := (-2) * o₁.center.re
+      set e := (-2) * o₁.center.im
+      set f := (r₁.re - o₁.center.re) ^ 2 + (r₁.im - o₁.center.im) ^ 2
+          - (o₁.center.re ^ 2 + o₁.center.im ^ 2)
+      have hline : a * p.re + b * p.im = c := by
+        linear_combination h2 - h1
+      have h1' : p.re ^ 2 + d * p.re + p.im ^ 2 + e * p.im = f := by
+        linear_combination h1
+      have ho₁ := Constructible.mem_constructibleClosure hinit ho₁
+      have ho₂ := Constructible.mem_constructibleClosure hinit ho₂
+      have hr₁ := Constructible.mem_constructibleClosure hinit hr₁
+      have hr₂ := Constructible.mem_constructibleClosure hinit hr₂
+      rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ho₁ ho₂ hr₁ hr₂
+      have hx := system_two_x h1' hline
+      have hy := system_two_y h1' hline
+      have ha : a ∈ Cℝ(initial) := mul_mem (by simp) <| sub_mem ho₁.1 ho₂.1
+      have hb : b ∈ Cℝ(initial) := mul_mem (by simp) <| sub_mem ho₁.2 ho₂.2
+      have hc : c ∈ Cℝ(initial) := by
+        apply sub_mem
+        · refine add_mem ?_ (pow_mem ho₁.2 _)
+          refine add_mem ?_ (pow_mem ho₁.1 _)
+          exact add_mem (pow_mem (sub_mem hr₂.1 ho₂.1) _) (pow_mem (sub_mem hr₂.2 ho₂.2) _)
+        · refine add_mem ?_ (pow_mem ho₂.2 _)
+          refine add_mem ?_ (pow_mem ho₂.1 _)
+          exact add_mem (pow_mem (sub_mem hr₁.1 ho₁.1) _) (pow_mem (sub_mem hr₁.2 ho₁.2) _)
+      have hd : d ∈ Cℝ(initial) := mul_mem (by simp) ho₁.1
+      have he : e ∈ Cℝ(initial) := mul_mem (by simp) ho₁.2
+      have hf : f ∈ Cℝ(initial) := by
+        apply sub_mem
+        · refine add_mem (pow_mem ?_ _) (pow_mem ?_ _)
+          · exact sub_mem hr₁.1 ho₁.1
+          · exact sub_mem hr₁.2 ho₁.2
+        · exact add_mem (pow_mem ho₁.1 _) (pow_mem ho₁.2 _)
+      constructor
+      · suffices 2 * (a ^ 2 + b ^ 2) * p.re + (d * b ^ 2 - e * a * b - 2 * a * c) ∈ Cℝ(initial) by
+          sorry
+        apply mem_constructibleClosure_of_sq_mem
+        rw [hx]
+        apply add_mem
+        · apply mul_mem
+          · apply mul_mem (by simp)
+            apply add_mem (pow_mem ha _) (pow_mem hb _)
+          · apply sub_mem
+            · apply sub_mem
+              · exact mul_mem (pow_mem hb _) hf
+              · exact pow_mem hc _
+            · exact mul_mem (mul_mem he hb) hc
+        · apply pow_mem
+          apply sub_mem
+          · sorry
+          · sorry
+      sorry
 
 
 theorem not_exist_angle_trisection :
