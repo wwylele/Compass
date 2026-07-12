@@ -162,6 +162,43 @@ match hf with
   apply extension _ _ he hef h
   apply IsIteratedQuadraticExtension.induction P bot extension he
 
+theorem IsIteratedQuadraticExtension.isPowerOfTwo_finrank {f : IntermediateField K L}
+    (hf : IsIteratedQuadraticExtension f) :
+    (Module.finrank K f).isPowerOfTwo :=
+match hf with
+| IsIteratedQuadraticExtension.bot => by
+  simpa using Nat.isPowerOfTwo_one
+| IsIteratedQuadraticExtension.extension e f he hef h => by
+  rw [← IntermediateField.finrank_bot_mul_relfinrank hef,
+    IntermediateField.relfinrank_eq_toNat_relrank e f, h, Cardinal.toNat_ofNat]
+  exact Nat.isPowerOfTwo_mul_two_of_isPowerOfTwo he.isPowerOfTwo_finrank
+
+theorem Nat.isPowerOfTwo.dvd {m n : ℕ} (h : n.isPowerOfTwo) (hdvd : m ∣ n) :
+    m.isPowerOfTwo := by
+  obtain ⟨k, hk⟩ := h
+  rw [hk] at hdvd
+  rw [Nat.dvd_prime_pow prime_two] at hdvd
+  obtain ⟨l, _, hl⟩ := hdvd
+  exact ⟨l, hl⟩
+
+theorem IsIteratedQuadraticExtension.isPowerOfTwo_natDegree_minpoly {f : IntermediateField K L}
+    (hf : IsIteratedQuadraticExtension f) {x : L} (hx : x ∈ f) :
+    (minpoly K x).natDegree.isPowerOfTwo := by
+  have h2 := hf.isPowerOfTwo_finrank
+  have : Module.Finite K f := by
+    apply Module.finite_of_finrank_pos
+    obtain ⟨n, hn⟩ := h2
+    simp [hn]
+  have hdvd : (minpoly K (⟨x, hx⟩ : f)).natDegree ∣ Module.finrank K f :=
+    minpoly.degree_dvd (IsAlgebraic.of_finite K (⟨x, hx⟩ : f)).isIntegral
+  have hminpoly : minpoly K x = minpoly K (⟨x, hx⟩ : f) := by
+    trans minpoly K (algebraMap f L (⟨x, hx⟩ : f))
+    · simp
+    apply minpoly.algebraMap_eq
+    exact FaithfulSMul.algebraMap_injective (↥f) L
+  rw [← hminpoly] at hdvd
+  exact h2.dvd hdvd
+
 theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
     (P : L → Prop)
     (bot : ∀ x : K, P (algebraMap K L x))
@@ -353,6 +390,12 @@ theorem mem_constructibleClosure {x : L} :
     rw [SetLike.coe_subset_coe]
     apply le_iSup_of_le f
     simp [hf]
+
+theorem isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure
+    {x : L} (hx : x ∈ constructibleClosure K L) :
+    (minpoly K x).natDegree.isPowerOfTwo := by
+  obtain ⟨f, hf, hx⟩ := mem_constructibleClosure.mp hx
+  exact hf.isPowerOfTwo_natDegree_minpoly hx
 
 theorem mem_constructibleClosure_of_mem_subfield {x : L} {K : Subfield L} (h : x ∈ K) :
     x ∈ constructibleClosure K L := by
@@ -1244,10 +1287,20 @@ theorem not_exist_angle_trisection :
   let o := Nonempty.some (show Nonempty P from inferInstance)
   let basis : OrthonormalBasis (Fin 2) ℝ V := (stdOrthonormalBasis ℝ V).reindex (finCongr hrank.out)
   refine ⟨((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o, o, basis 0 +ᵥ o, ?_, ?_, ?_, ?_⟩
-  ·
-    sorry
-  · sorry
-  · sorry
+  · suffices ((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o ≠ (0 : V) +ᵥ o by simpa
+    rw [(vadd_right_cancel_iff _).ne]
+    intro h
+    have h := congr(basis.repr $h 0)
+    simp at h
+  · suffices (0 : V) +ᵥ o ≠ basis 0 +ᵥ o by simpa
+    rw [(vadd_right_cancel_iff _).ne]
+    intro h
+    have h := congr(basis.repr $h 0)
+    simp at h
+  · rw [(vadd_right_cancel_iff _).ne]
+    intro h
+    have h := congr(basis.repr $h 0)
+    simp at h
   intro q₁ q₂ q₃
   let e : P ≃ᵃⁱ[ℝ] ℂ := (AffineIsometryEquiv.vaddConst ℝ o).symm.trans
     (basis.equiv Complex.orthonormalBasisOneI (Equiv.refl _)).toAffineIsometryEquiv
@@ -1372,6 +1425,8 @@ theorem not_exist_angle_trisection :
     refine Subfield.closure_eq_of_le ?_ (by simp)
     apply Set.pair_subset (by simp) (by simp)
   rw [hbot] at hwremem
+  have hquad : (minpoly (⊥ : Subfield ℝ) w.re).natDegree.isPowerOfTwo :=
+    isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hwremem
   let p : Polynomial (⊥ : Subfield ℝ) :=
     8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1
   have hp : Irreducible p := by
@@ -1387,11 +1442,14 @@ theorem not_exist_angle_trisection :
       linear_combination this
     rw [← Real.cos_three_mul, show 3 * (π / 9) = π / 3 by ring]
     simp
-  have hminpoly : (minpoly (⊥ : Subfield ℝ) w.re).degree = 3 := by
+  have hminpoly : (minpoly (⊥ : Subfield ℝ) w.re).natDegree = 3 := by
+    apply Polynomial.natDegree_eq_of_degree_eq_some
     rw [Irreducible.dvd_iff hp] at hwp
     rw [← Polynomial.degree_eq_degree_of_associated <| Or.resolve_left hwp (minpoly.not_isUnit _ _)]
     unfold p
     compute_degree!
-  sorry
+  rw [hminpoly] at hquad
+  contrapose! hquad
+  decide
 
 end EuclideanGeometry
