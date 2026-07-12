@@ -4,6 +4,7 @@ import Mathlib
 -/
 
 open ComplexConjugate
+open scoped Real
 
 variable {K L : Type*} [Field K] [Field L] [Algebra K L]
 
@@ -628,8 +629,8 @@ theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, con
 namespace EuclideanGeometry
 
 variable {V V₂ P P₂ : Type*}
-  [NormedAddCommGroup V] [InnerProductSpace ℝ V] [Fact (Module.finrank ℝ V = 2)]
-  [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [Fact (Module.finrank ℝ V₂ = 2)]
+  [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
+  [NormedAddCommGroup V₂] [InnerProductSpace ℝ V₂] [hrank₂ : Fact (Module.finrank ℝ V₂ = 2)]
   [MetricSpace P] [NormedAddTorsor V P]
   [MetricSpace P₂] [NormedAddTorsor V₂ P₂]
 
@@ -716,6 +717,86 @@ theorem ConstructibleCircle.map (f : P →ᵃⁱ[ℝ] P₂) {initial : Set P} {o
     simpa [← Sphere.mem_coe'] using h
 
 end
+
+theorem ConstructiblePoint.map_iff (f : P ≃ᵃⁱ[ℝ] P₂) {initial : Set P} {p : P} :
+    ConstructiblePoint initial p ↔ ConstructiblePoint (f '' initial) (f p) where
+  mp h := ConstructiblePoint.map f.toAffineIsometry h
+  mpr h := by
+    convert ConstructiblePoint.map f.symm.toAffineIsometry h
+    · rw [Set.image_image]
+      simp
+    · simp
+
+mutual
+theorem ConstructiblePoint.mono {i1 i2 : Set P} (hi : i1 ⊆ i2) {p : P}
+    (h : ConstructiblePoint i1 p) :
+    ConstructiblePoint i2 p :=
+  match h with
+  | ConstructiblePoint.given p h =>
+    ConstructiblePoint.given p (Set.mem_of_mem_of_subset h hi)
+  | ConstructiblePoint.twoLines l₁ l₂ hl₁ hl₂ h p hpl₁ hpl₂ =>
+    ConstructiblePoint.twoLines l₁ l₂ (hl₁.mono hi) (hl₂.mono hi) h p hpl₁ hpl₂
+  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo =>
+    ConstructiblePoint.lineCircle l o (hl.mono hi) (ho.mono hi) p hpl hpo
+  | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ =>
+    ConstructiblePoint.twoCircles o₁ o₂ (ho₁.mono hi) (ho₂.mono hi) h p hpo₁ hpo₂
+
+theorem ConstructibleLine.mono {i1 i2 : Set P} (hi : i1 ⊆ i2) {l : AffineSubspace ℝ P}
+    (h : ConstructibleLine i1 l) :
+    ConstructibleLine i2 l :=
+  match h with
+  | ConstructibleLine.twoPoints p₁ p₂ hp₁ hp₂ h l hp₁l hp₂l hrank =>
+    ConstructibleLine.twoPoints p₁ p₂ (hp₁.mono hi) (hp₂.mono hi) h l hp₁l hp₂l hrank
+
+theorem ConstructibleCircle.mono {i1 i2 : Set P} (hi : i1 ⊆ i2) {o : Sphere P}
+    (h : ConstructibleCircle i1 o) :
+    ConstructibleCircle i2 o :=
+  match h with
+  | ConstructibleCircle.centerRadius o r hcenter hradius h =>
+    ConstructibleCircle.centerRadius o r (hcenter.mono hi) (hradius.mono hi) h
+end
+
+mutual
+theorem ConstructiblePoint.of_insert {initial : Set P} {q p : P} (hq : ConstructiblePoint initial q)
+    (h : ConstructiblePoint (initial.insert q) p) :
+    ConstructiblePoint initial p :=
+  match h with
+  | ConstructiblePoint.given p h => by
+    rcases Set.mem_insert_iff.mp h with h | h
+    · simpa [h] using hq
+    exact ConstructiblePoint.given p h
+  | ConstructiblePoint.twoLines l₁ l₂ hl₁ hl₂ h p hpl₁ hpl₂ =>
+    ConstructiblePoint.twoLines l₁ l₂ (hl₁.of_insert hq) (hl₂.of_insert hq) h p hpl₁ hpl₂
+  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo =>
+    ConstructiblePoint.lineCircle l o (hl.of_insert hq) (ho.of_insert hq) p hpl hpo
+  | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ =>
+    ConstructiblePoint.twoCircles o₁ o₂ (ho₁.of_insert hq) (ho₂.of_insert hq) h p hpo₁ hpo₂
+
+theorem ConstructibleLine.of_insert {initial : Set P} {q : P} (hq : ConstructiblePoint initial q)
+    {l : AffineSubspace ℝ P} (h : ConstructibleLine (initial.insert q) l) :
+    ConstructibleLine initial l :=
+  match h with
+  | ConstructibleLine.twoPoints p₁ p₂ hp₁ hp₂ h l hp₁l hp₂l hrank =>
+    ConstructibleLine.twoPoints p₁ p₂
+      (ConstructiblePoint.of_insert hq hp₁) (ConstructiblePoint.of_insert hq hp₂)
+      h l hp₁l hp₂l hrank
+
+theorem ConstructibleCircle.of_insert {initial : Set P} {q : P} (hq : ConstructiblePoint initial q)
+    {o : Sphere P} (h : ConstructibleCircle (initial.insert q) o) :
+    ConstructibleCircle initial o :=
+  match h with
+  | ConstructibleCircle.centerRadius o r hcenter hradius h =>
+    ConstructibleCircle.centerRadius o r
+      (ConstructiblePoint.of_insert hq hcenter) (ConstructiblePoint.of_insert hq hradius) h
+end
+
+theorem constructiblePoint_insert {initial : Set P} {p : P} (h : ConstructiblePoint initial p) :
+    ConstructiblePoint (initial.insert p) = ConstructiblePoint initial := by
+  ext q
+  constructor
+  · apply ConstructiblePoint.of_insert h
+  · intro h
+    apply h.mono (Set.subset_insert _ _)
 
 instance : Fact (Module.finrank ℝ ℂ = 2) := ⟨Complex.finrank_real_complex⟩
 
@@ -880,7 +961,7 @@ theorem system_one_mem {s : Set ℝ} {x y a b c d e f : ℝ}
     · apply sub_mem (mul_mem hf ha) (mul_mem hc hd)
 
 
-theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
+theorem ConstructiblePoint.mem_constructibleClosure {initial : Set ℂ}
     (hinit : ∀ x ∈ initial, conj x ∈ initial) {p : ℂ}
     (h : ConstructiblePoint initial p) :
     p ∈ constructibleClosure (Subfield.closure initial) ℂ :=
@@ -894,10 +975,10 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
     | ConstructibleLine.twoPoints a b ha hb hab l₁ hal hbl hl₁ =>
     match hl₂ with
     | ConstructibleLine.twoPoints c d hc hd hcd l₂ hcl hdl hl₂ => by
-      have ha := Constructible.mem_constructibleClosure hinit ha
-      have hb := Constructible.mem_constructibleClosure hinit hb
-      have hc := Constructible.mem_constructibleClosure hinit hc
-      have hd := Constructible.mem_constructibleClosure hinit hd
+      have ha := ConstructiblePoint.mem_constructibleClosure hinit ha
+      have hb := ConstructiblePoint.mem_constructibleClosure hinit hb
+      have hc := ConstructiblePoint.mem_constructibleClosure hinit hc
+      have hd := ConstructiblePoint.mem_constructibleClosure hinit hd
       have habpcl := collinear_of_mem hl₁ hal hbl hpl₁
       have hcdpcl := collinear_of_mem hl₂ hcl hdl hpl₂
       have habp := equation_of_collinear habpcl
@@ -998,10 +1079,10 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
       have hcircle : p.re ^ 2 + d * p.re + p.im ^ 2 + e * p.im = f := by
         linear_combination hcircle
       have hl := equation_of_collinear <| collinear_of_mem hl hal hbl hpl
-      have ho := Constructible.mem_constructibleClosure hinit ho
-      have hr := Constructible.mem_constructibleClosure hinit hr
-      have ha := Constructible.mem_constructibleClosure hinit ha
-      have hb := Constructible.mem_constructibleClosure hinit hb
+      have ho := ConstructiblePoint.mem_constructibleClosure hinit ho
+      have hr := ConstructiblePoint.mem_constructibleClosure hinit hr
+      have ha := ConstructiblePoint.mem_constructibleClosure hinit ha
+      have hb := ConstructiblePoint.mem_constructibleClosure hinit hb
       rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ho hr ha hb
       apply system_two_mem hcircle hl
       · contrapose! hab
@@ -1045,10 +1126,10 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
         linear_combination h2 - h1
       have h1' : p.re ^ 2 + d * p.re + p.im ^ 2 + e * p.im = f := by
         linear_combination h1
-      have ho₁ := Constructible.mem_constructibleClosure hinit ho₁
-      have ho₂ := Constructible.mem_constructibleClosure hinit ho₂
-      have hr₁ := Constructible.mem_constructibleClosure hinit hr₁
-      have hr₂ := Constructible.mem_constructibleClosure hinit hr₂
+      have ho₁ := ConstructiblePoint.mem_constructibleClosure hinit ho₁
+      have ho₂ := ConstructiblePoint.mem_constructibleClosure hinit ho₂
+      have hr₁ := ConstructiblePoint.mem_constructibleClosure hinit hr₁
+      have hr₂ := ConstructiblePoint.mem_constructibleClosure hinit hr₂
       rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ho₁ ho₂ hr₁ hr₂
       apply system_two_mem h1' hline
       · contrapose! h
@@ -1078,12 +1159,123 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
           exact add_mem (pow_mem (sub_mem hr₁.1 ho₁.1) _) (pow_mem (sub_mem hr₁.2 ho₁.2) _)
 
 
+theorem AffineIsometryEquiv.trans_apply {𝕜 : Type*} {V : Type*} {V₂ : Type*} {V₃ : Type*}
+    {P : Type*} {P₂ : Type*} {P₃ : Type*}
+    [NormedField 𝕜] [SeminormedAddCommGroup V] [NormedSpace 𝕜 V]
+    [PseudoMetricSpace P] [NormedAddTorsor V P] [SeminormedAddCommGroup V₂]
+    [NormedSpace 𝕜 V₂] [PseudoMetricSpace P₂] [NormedAddTorsor V₂ P₂]
+    [SeminormedAddCommGroup V₃] [NormedSpace 𝕜 V₃] [PseudoMetricSpace P₃]
+    [NormedAddTorsor V₃ P₃] (e₁ : P ≃ᵃⁱ[𝕜] P₂) (e₂ : P₂ ≃ᵃⁱ[𝕜] P₃) (x : P) :
+    e₁.trans e₂ x = e₂ (e₁ x) := rfl
+
+@[simp]
+theorem arccos_half : Real.arccos 2⁻¹ = π / 3 := by
+  apply Real.arccos_eq_of_eq_cos
+  · exact div_nonneg Real.pi_nonneg (by simp)
+  · grind [Real.pi_nonneg]
+  · simp
+
 theorem not_exist_angle_trisection :
-    ∃ p₁ p₂ p₃ : P, ∀ q₁ q₂ q₃ : P,
+    ∃ p₁ p₂ p₃ : P, p₁ ≠ p₂ ∧ p₂ ≠ p₃ ∧ p₁ ≠ p₃ ∧
+    ∀ q₁ q₂ q₃ : P,
     ConstructiblePoint {p₁, p₂, p₃} q₁ →
     ConstructiblePoint {p₁, p₂, p₃} q₂ →
     ConstructiblePoint {p₁, p₂, p₃} q₃ →
     3 * ∠ q₁ q₂ q₃ ≠ ∠ p₁ p₂ p₃ := by
+  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
+  let o := Nonempty.some (show Nonempty P from inferInstance)
+  let basis : OrthonormalBasis (Fin 2) ℝ V := (stdOrthonormalBasis ℝ V).reindex (finCongr hrank.out)
+  refine ⟨((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o, o, basis 0 +ᵥ o, ?_, ?_, ?_, ?_⟩
+  ·
+    sorry
+  · sorry
+  · sorry
+  intro q₁ q₂ q₃
+  let e : P ≃ᵃⁱ[ℝ] ℂ := (AffineIsometryEquiv.vaddConst ℝ o).symm.trans
+    (basis.equiv Complex.orthonormalBasisOneI (Equiv.refl _)).toAffineIsometryEquiv
+  have hp₁ : e (((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o) =
+      2⁻¹ + 2⁻¹ * ↑√3 * Complex.I := by
+    simp_rw [e, AffineIsometryEquiv.trans_apply, AffineIsometryEquiv.coe_vaddConst_symm,
+        vadd_vsub]
+    simp
+  have hp₂ : e o = 0 := by simp [e]
+  have hp₃ : e (basis 0 +ᵥ o) = 1 := by
+    simp_rw [e, AffineIsometryEquiv.trans_apply, AffineIsometryEquiv.coe_vaddConst_symm,
+        vadd_vsub]
+    simp
+  have hinit : e '' {((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o, o, basis 0 +ᵥ o} =
+      {2⁻¹ + 2⁻¹ * √3 * Complex.I, 0, 1} := by
+    simp_rw [Set.image_insert_eq, Set.image_singleton, hp₁, hp₂, hp₃]
+  have hnorm : ‖2⁻¹ + 2⁻¹ * ↑√3 * Complex.I‖ = 1 := by
+    rw [← sq_eq_sq₀ (by simp) (by simp), Complex.sq_norm]
+    suffices 2⁻¹ * 2⁻¹ + 2⁻¹ * √3 * (2⁻¹ * √3) = 1 by simpa [Complex.normSq]
+    grind
+  have hcons : ConstructiblePoint {2⁻¹ + 2⁻¹ * √3 * Complex.I, 0, 1}
+      = ConstructiblePoint {0, 1} := by
+    apply constructiblePoint_insert
+    apply ConstructiblePoint.twoCircles ⟨0, 1⟩ ⟨1, 1⟩
+    · apply ConstructibleCircle.centerRadius _ 1 (ConstructiblePoint.given 0 (by simp))
+        (ConstructiblePoint.given 1 (by simp))
+      simp [EuclideanGeometry.mem_sphere]
+    · apply ConstructibleCircle.centerRadius _ 0 (ConstructiblePoint.given 1 (by simp))
+        (ConstructiblePoint.given 0 (by simp))
+      simp [EuclideanGeometry.mem_sphere]
+    · simp
+    · rw [mem_sphere, dist_zero_right, hnorm]
+    · rw [mem_sphere, Complex.dist_eq, ← sq_eq_sq₀ (by simp) (by simp), Complex.sq_norm]
+      suffices (2⁻¹ - 1) * (2⁻¹ - 1) + 2⁻¹ * √3 * (2⁻¹ * √3) = 1 by simpa [Complex.normSq]
+      grind
+  simp_rw [ConstructiblePoint.map_iff e, hinit, hcons,
+    ← AffineIsometry.angle_map e.toAffineIsometry,
+    AffineIsometryEquiv.coe_toAffineIsometry, hp₁, hp₂, hp₃]
+  have hangle : ∠ (2⁻¹ + 2⁻¹ * √3 * Complex.I) 0 1 = π / 3 := by
+    rw [EuclideanGeometry.angle, InnerProductGeometry.angle]
+    simp [hnorm]
+  rw [hangle]
+  intro h1 h2 h3 hangle
+  rw [mul_comm 3, ← eq_div_iff_mul_eq (by simp), div_div, (show 3 * 3 = (9 : ℝ) by norm_num)]
+    at hangle
+  set a := e q₁
+  set b := e q₂
+  set c := e q₃
+  have hacne : c ≠ a := by
+    intro h
+    rw [h] at hangle
+    by_cases hab : a = b
+    · have hangle : π / 2 = π / 9 := by simpa [hab] using hangle
+      rw [div_eq_div_iff (by simp) (by simp)] at hangle
+      have hangle : 7 * π = 0 := by linear_combination hangle
+      simp at hangle
+    · rw [angle_self_of_ne hab] at hangle
+      symm at hangle
+      simp at hangle
+  have hac0 : ‖c - a‖ ≠ 0 := by
+    intro h
+    have : c = a := by simpa [sub_eq_zero] using h
+    exact hacne this
+  have h3' : ConstructiblePoint {0, 1} (‖b - a‖ / ‖c - a‖ * (c - a) + a) := by
+    apply ConstructiblePoint.lineCircle line[ℝ, c, a] ⟨a, ‖b - a‖⟩
+    · apply ConstructibleLine.twoPoints c a h3 h1 hacne
+      · exact left_mem_affineSpan_pair ℝ c a
+      · exact right_mem_affineSpan_pair ℝ c a
+      · rw [direction_affineSpan, vectorSpan_pair, finrank_span_singleton]
+        rw [vsub_eq_zero_iff_eq.ne]
+        exact hacne
+    · apply ConstructibleCircle.centerRadius _ b h1 h2
+      simp [mem_sphere, dist_eq_norm]
+    · suffices (‖b - a‖ / ‖c - a‖) • (c -ᵥ a) +ᵥ a ∈ line[ℝ, c, a] by
+        simpa using this
+      apply vadd_mem_affineSpan_of_mem_affineSpan_of_mem_vectorSpan
+      · apply right_mem_affineSpan_pair
+      · apply smul_vsub_mem_vectorSpan_pair
+    · simp [mem_sphere, hac0]
+  have hstar : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
+
+  --have h1 := ConstructiblePoint.mem_constructibleClosure hstar h1
+  --have h2 := ConstructiblePoint.mem_constructibleClosure hstar h2
+  --have h3 := ConstructiblePoint.mem_constructibleClosure hstar h3
+
+
   sorry
 
 end EuclideanGeometry

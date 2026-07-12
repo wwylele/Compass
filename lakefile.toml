@@ -4,10 +4,11 @@ keywords = ["math"]
 defaultTargets = ["Compass"]
 
 [leanOptions]
-pp.unicode.fun = true # pretty-prints `fun a ↦ b`
-relaxedAutoImplicit = false
+pp.unicode.fun = true                 # pretty-prints `fun a ↦ b`
+autoImplicit = false
 weak.linter.mathlibStandardSet = true
 maxSynthPendingDepth = 3
+linter.style.header = false
 
 [[require]]
 name = "mathlib"
