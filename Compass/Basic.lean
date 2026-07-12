@@ -104,7 +104,7 @@ theorem star_bot [StarRing K] [StarRing L] [StarModule K L] :
   simp only [mem_star_iff, mem_bot, Set.mem_range]
   exact ⟨fun ⟨y, h⟩ ↦ ⟨star y, by simp [h]⟩, fun ⟨y, h⟩ ↦ ⟨star y, by simp [h]⟩⟩
 
-@[simp]
+/-@[simp]
 theorem relrank_star [StarRing K] [StarRing L] [StarModule K L]
     (f g : IntermediateField K L) :
     (star f).relrank (star g) = f.relrank g := by
@@ -139,8 +139,9 @@ theorem relrank_star [StarRing K] [StarRing L] [StarModule K L]
       simp [i, j, IntermediateField.smul_def]
   · apply rank_le_of_injective_injectiveₛ i.symm j.symm.toAddMonoidHom i.symm.injective
       j.symm.injective
-    · intro ⟨r, hr⟩ ⟨m, hm⟩
-      simp [i, j, IntermediateField.smul_def]
+    intro ⟨r, hr⟩ ⟨m, hm⟩
+    unfold i j
+    simp-/
 
 end IntermediateField
 
@@ -319,7 +320,7 @@ theorem IsIteratedQuadraticExtension.finsetSup {ι : Type*} (s : Finset ι)
     apply h
     simp [hi]
 
-protected theorem IsIteratedQuadraticExtension.star [StarRing K] [StarRing L] [StarModule K L]
+/-protected theorem IsIteratedQuadraticExtension.star [StarRing K] [StarRing L] [StarModule K L]
     {f : IntermediateField K L}
     (hf : IsIteratedQuadraticExtension f) :
     IsIteratedQuadraticExtension (star f) :=
@@ -328,7 +329,7 @@ match hf with
 | IsIteratedQuadraticExtension.extension e f' he hef h => by
   refine IsIteratedQuadraticExtension.extension (star e) (star f') he.star ?_ ?_
   · exact IntermediateField.star_mono hef
-  · simpa using h
+  · simpa using h-/
 
 variable (K L) in
 def constructibleClosure : IntermediateField K L :=
@@ -359,12 +360,12 @@ theorem mem_constructibleClosure_of_mem_subfield {x : L} {K : Subfield L} (h : x
   rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
   exact ⟨⟨x, h⟩, (by simp [Subfield.algebraMap_ofSubfield])⟩
 
-theorem star_mem_constructibleClosure [StarRing K] [StarRing L] [StarModule K L]
+/-theorem star_mem_constructibleClosure [StarRing K] [StarRing L] [StarModule K L]
     {x : L} (hx : x ∈ constructibleClosure K L) :
     star x ∈ constructibleClosure K L := by
   rw [mem_constructibleClosure] at ⊢ hx
   obtain ⟨f, hf, hx⟩ := hx
-  exact ⟨star f, hf.star, by simpa using hx⟩
+  exact ⟨star f, hf.star, by simpa using hx⟩-/
 
 theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructibleClosure K L) :
     x ∈ constructibleClosure K L := by
@@ -1175,6 +1176,63 @@ theorem arccos_half : Real.arccos 2⁻¹ = π / 3 := by
   · grind [Real.pi_nonneg]
   · simp
 
+theorem irreducible_861 :
+    Irreducible (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℚ) := by
+  have hdegeee :
+      (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℚ).natDegree = 3 := by
+    compute_degree!
+  have hdegree' :
+      (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℤ).natDegree = 3 := by
+    compute_degree!
+  apply Polynomial.irreducible_of_degree_le_three_of_not_isRoot
+  · simp [hdegeee]
+  intro x h
+  have haeval : (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℤ).aeval x = 0 := by
+    simpa [map_ofNat, Polynomial.IsRoot.def] using h
+  have hnum : IsFractionRing.num ℤ x ∣ 1 := by simpa using num_dvd_of_is_root haeval
+  have hnum : x.num = 1 ∨ x.num = -1 := by
+    simpa [← isUnit_iff_dvd_one, Int.isUnit_iff] using x.isFractionRingNum.symm.dvd.trans hnum
+  have hden := den_dvd_of_is_root haeval
+  rw [Polynomial.leadingCoeff, hdegree', Polynomial.coeff_sub, Polynomial.coeff_sub,
+    Polynomial.coeff_ofNat_mul, Polynomial.coeff_ofNat_mul, Polynomial.coeff_X,
+    Polynomial.coeff_one] at hden
+  have hden : (IsFractionRing.den ℤ x).val ∣ 8 := by simpa using hden
+  have hden : x.den ∣ 8 := by
+    simpa using x.isFractionRingDen.symm.dvd.trans (Int.natAbs_dvd_natAbs.mpr hden)
+  have hdenle : x.den ≤ 8 := Nat.le_of_dvd (by simp) hden
+  interval_cases hdeneq : x.den
+  · simp at hden
+  · rcases hnum with hnum | hnum
+    · have hx : x = 1 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = -1 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+  · rcases hnum with hnum | hnum
+    · have hx : x = 1 / 2 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = -1 / 2 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+  · simp at hden
+  · rcases hnum with hnum | hnum
+    · have hx : x = 1 / 4 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = -1 / 4 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+  · simp at hden
+  · simp at hden
+  · simp at hden
+  · rcases hnum with hnum | hnum
+    · have hx : x = 1 / 8 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = -1 / 8 := by rw [← x.num_div_den, hnum, hdeneq]; simp
+      norm_num [hx, map_ofNat] at haeval
+
+noncomputable
+def ratEquivBot [CharZero K] : ℚ ≃+* (⊥ : Subfield K) :=
+    (algebraMap ℚ K).rangeRestrictFieldEquiv.trans
+    (RingEquiv.subfieldCongr Subfield.bot_eq_of_charZero.symm)
+
+
 theorem not_exist_angle_trisection :
     ∃ p₁ p₂ p₃ : P, p₁ ≠ p₂ ∧ p₂ ≠ p₃ ∧ p₁ ≠ p₃ ∧
     ∀ q₁ q₂ q₃ : P,
@@ -1232,50 +1290,108 @@ theorem not_exist_angle_trisection :
     rw [EuclideanGeometry.angle, InnerProductGeometry.angle]
     simp [hnorm]
   rw [hangle]
-  intro h1 h2 h3 hangle
+  intro ha hb hc hangle
   rw [mul_comm 3, ← eq_div_iff_mul_eq (by simp), div_div, (show 3 * 3 = (9 : ℝ) by norm_num)]
     at hangle
   set a := e q₁
   set b := e q₂
   set c := e q₃
-  have hacne : c ≠ a := by
+  have hcbne : c ≠ b := by
     intro h
-    rw [h] at hangle
-    by_cases hab : a = b
-    · have hangle : π / 2 = π / 9 := by simpa [hab] using hangle
-      rw [div_eq_div_iff (by simp) (by simp)] at hangle
-      have hangle : 7 * π = 0 := by linear_combination hangle
-      simp at hangle
-    · rw [angle_self_of_ne hab] at hangle
-      symm at hangle
-      simp at hangle
-  have hac0 : ‖c - a‖ ≠ 0 := by
+    rw [h, angle_self_right] at hangle
+    rw [div_eq_div_iff (by simp) (by simp)] at hangle
+    have hangle : 7 * π = 0 := by linear_combination hangle
+    simp at hangle
+  have habne : a ≠ b := by
     intro h
-    have : c = a := by simpa [sub_eq_zero] using h
-    exact hacne this
-  have h3' : ConstructiblePoint {0, 1} (‖b - a‖ / ‖c - a‖ * (c - a) + a) := by
-    apply ConstructiblePoint.lineCircle line[ℝ, c, a] ⟨a, ‖b - a‖⟩
-    · apply ConstructibleLine.twoPoints c a h3 h1 hacne
-      · exact left_mem_affineSpan_pair ℝ c a
-      · exact right_mem_affineSpan_pair ℝ c a
+    rw [h, angle_self_left] at hangle
+    rw [div_eq_div_iff (by simp) (by simp)] at hangle
+    have hangle : 7 * π = 0 := by linear_combination hangle
+    simp at hangle
+  have hcb0 : ‖c - b‖ ≠ 0 := by
+    intro h
+    have : c = b := by simpa [sub_eq_zero] using h
+    exact hcbne this
+  have hab0 : ‖a - b‖ ≠ 0 := by
+    intro h
+    have : a = b := by simpa [sub_eq_zero] using h
+    exact habne this
+  set d := ‖a - b‖ / ‖c - b‖ * (c - b) + b
+  have hdbne : d ≠ b := by simp [d, sub_eq_zero, habne, hcbne]
+  have hd : ConstructiblePoint {0, 1} d := by
+    apply ConstructiblePoint.lineCircle line[ℝ, c, b] ⟨b, ‖a - b‖⟩
+    · apply ConstructibleLine.twoPoints c b hc hb hcbne
+      · exact left_mem_affineSpan_pair ℝ c b
+      · exact right_mem_affineSpan_pair ℝ c b
       · rw [direction_affineSpan, vectorSpan_pair, finrank_span_singleton]
         rw [vsub_eq_zero_iff_eq.ne]
-        exact hacne
-    · apply ConstructibleCircle.centerRadius _ b h1 h2
+        exact hcbne
+    · apply ConstructibleCircle.centerRadius _ a hb ha
       simp [mem_sphere, dist_eq_norm]
-    · suffices (‖b - a‖ / ‖c - a‖) • (c -ᵥ a) +ᵥ a ∈ line[ℝ, c, a] by
+    · suffices (‖a - b‖ / ‖c - b‖) • (c -ᵥ b) +ᵥ b ∈ line[ℝ, c, b] by
         simpa using this
       apply vadd_mem_affineSpan_of_mem_affineSpan_of_mem_vectorSpan
       · apply right_mem_affineSpan_pair
       · apply smul_vsub_mem_vectorSpan_pair
-    · simp [mem_sphere, hac0]
+    · simp [d, mem_sphere, hcb0]
+  have habd : ∠ a b c = ∠ a b d := by
+    apply angle_smul_right_of_pos _ (show 0 < (‖c - b‖ / ‖a - b‖) by
+      apply div_pos
+      · simpa using hcb0
+      · simpa using hab0
+    )
+    suffices ‖c - b‖ / ‖a - b‖ * (‖a - b‖ / ‖c - b‖ * (c - b)) = c - b by simpa [d]
+    rw [← mul_assoc, ← mul_div_assoc, div_mul_cancel₀ _ (by simpa using hab0),
+      div_self (by simpa using hcb0), one_mul]
+  rw [habd, EuclideanGeometry.angle,
+    Complex.angle_eq_abs_arg (by simpa [sub_eq_zero] using habne)
+    (by simpa [sub_eq_zero] using hdbne), vsub_eq_sub, vsub_eq_sub] at hangle
+  set w := (a - b) / (d - b)
+  have hwnorm : ‖w‖ = 1 := by simp [w, d, hcb0, hab0]
+  have hwre : w.re = Real.cos (π / 9) := by
+    rw [← Complex.norm_mul_exp_arg_mul_I w, hwnorm,
+      Complex.ofReal_one, one_mul, Complex.exp_ofReal_mul_I_re]
+    rcases abs_cases w.arg with ⟨hw, _⟩ | ⟨hw, _⟩
+    · rw [← hw, hangle]
+    · rw [← hangle, hw, Real.cos_neg]
   have hstar : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
-
-  --have h1 := ConstructiblePoint.mem_constructibleClosure hstar h1
-  --have h2 := ConstructiblePoint.mem_constructibleClosure hstar h2
-  --have h3 := ConstructiblePoint.mem_constructibleClosure hstar h3
-
-
+  have ha := ConstructiblePoint.mem_constructibleClosure hstar ha
+  have hb := ConstructiblePoint.mem_constructibleClosure hstar hb
+  have hd := ConstructiblePoint.mem_constructibleClosure hstar hd
+  have hw : w ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℂ)) ℂ :=
+    div_mem (sub_mem ha hb) (sub_mem hd hb)
+  have hwremem : w.re ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℝ)) ℝ := by
+    have h :=  (re_im_subset_constructibleClosure hw).1
+    suffices Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} by
+      rw [this] at h
+      exact h
+    ext x
+    simp
+    grind
+  have hbot : Subfield.closure ({0, 1} : Set ℝ) = ⊥ := by
+    refine Subfield.closure_eq_of_le ?_ (by simp)
+    apply Set.pair_subset (by simp) (by simp)
+  rw [hbot] at hwremem
+  let p : Polynomial (⊥ : Subfield ℝ) :=
+    8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1
+  have hp : Irreducible p := by
+    suffices Irreducible (Polynomial.mapEquiv ratEquivBot
+        (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1)) by
+      convert this
+      simp [p]
+    exact Irreducible.map _ irreducible_861
+  have hwp : minpoly (⊥ : Subfield ℝ) w.re ∣ p := by
+    apply minpoly.dvd
+    suffices 8 * Real.cos (π / 9) ^ 3 - 6 * Real.cos (π / 9) - 1 = 0 by simpa [p, hwre, map_ofNat]
+    suffices 2 * (4 * Real.cos (π / 9) ^ 3 - 3 * Real.cos (π / 9)) - 1 = 0 by
+      linear_combination this
+    rw [← Real.cos_three_mul, show 3 * (π / 9) = π / 3 by ring]
+    simp
+  have hminpoly : (minpoly (⊥ : Subfield ℝ) w.re).degree = 3 := by
+    rw [Irreducible.dvd_iff hp] at hwp
+    rw [← Polynomial.degree_eq_degree_of_associated <| Or.resolve_left hwp (minpoly.not_isUnit _ _)]
+    unfold p
+    compute_degree!
   sorry
 
 end EuclideanGeometry
