@@ -814,8 +814,8 @@ theorem system_two_mem {s : Set ℝ} {x y a b c d e f : ℝ}
         · exact mul_mem (mul_mem ha hd) hf
     · exact pow_mem h _
 
-theorem collinear_of_mem {a b p : ℂ} {l : AffineSubspace ℝ ℂ} (hl : Module.finrank ℝ ↥l.direction = 1)
-    (ha : a ∈ l) (hb : b ∈ l) (hp : p ∈ l) :
+theorem collinear_of_mem {a b p : ℂ} {l : AffineSubspace ℝ ℂ}
+    (hl : Module.finrank ℝ l.direction = 1) (ha : a ∈ l) (hb : b ∈ l) (hp : p ∈ l) :
     Collinear ℝ {a, b, p} := by
   rw [collinear_iff_finrank_le_one, ← hl, ← direction_affineSpan]
   apply Submodule.finrank_mono
@@ -833,6 +833,20 @@ theorem equation_of_collinear {a b p : ℂ} (habp : Collinear ℝ {a, b, p}) :
   simp [congr(Complex.re $ha), congr(Complex.re $hb),
     congr(Complex.im $ha), congr(Complex.im $hb)]
   ring
+
+theorem line_eq_affineSpan {a b : ℂ} {l : AffineSubspace ℝ ℂ}
+    (hl : Module.finrank ℝ l.direction = 1) (h : a ≠ b) (ha : a ∈ l) (hb : b ∈ l) :
+    l = line[ℝ, a, b] := by
+  apply AffineSubspace.ext_of_direction_eq
+  · rw [direction_affineSpan, vectorSpan_pair]
+    let v : l.direction := ⟨a -ᵥ b, AffineSubspace.vsub_mem_direction ha hb⟩
+    have hv : v ≠ 0 := by simpa [v, sub_eq_zero] using h
+    rw [finrank_eq_one_iff_of_nonzero v hv] at hl
+    have hl := congr(Submodule.map (l.direction.subtype) $hl)
+    simpa [v] using hl.symm
+  · refine ⟨a, ?_, ?_⟩
+    · exact ha
+    · apply left_mem_affineSpan_pair
 
 theorem system_one_mem {s : Set ℝ} {x y a b c d e f : ℝ}
     (h1 : a * x + b * y = c)
@@ -920,12 +934,38 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
           rw [hc, hd, hcd]
         have : u.re * v.im - u.im * v.re = 0 := by simpa [hab0, hcd0] using this
         have huv : ∃ (w : ℝ), w * u = v := by
-          sorry
+          by_cases hu0 : u.re = 0
+          · have hu0' : u.im ≠ 0 := by
+              intro h
+              have hueq0 : u = 0 := Complex.ext hu0 h
+              rw [hueq0] at ha hb
+              simp [ha, hb] at hab
+            have hv0 : v.re = 0 := by simpa [hu0, hu0'] using this
+            use v.im / u.im
+            apply Complex.ext
+            · simp [hu0, hv0]
+            · simp [hu0']
+          · use v.re / u.re
+            apply Complex.ext
+            · simp [hu0]
+            · simp only [Complex.ofReal_div, Complex.mul_im, Complex.div_ofReal_re,
+                Complex.ofReal_re, Complex.div_ofReal_im, Complex.ofReal_im, zero_div, zero_mul,
+                add_zero]
+              grind
         obtain ⟨w, hw⟩ := huv
+        have hw0 : w ≠ 0 := by
+          intro h
+          have hv0 : v = 0 := by simpa [h] using hw.symm
+          rw [hv0] at hc hd
+          simp [hc, hd] at hcd
+        rw [line_eq_affineSpan hl₁ hab hal hbl]
         apply AffineSubspace.ext_of_direction_eq
-        · sorry
+        · rw [line_eq_affineSpan hl₂ hcd hcl hdl]
+          simp_rw [direction_affineSpan, vectorSpan_pair, ha, hb, hc, hd, ← hw]
+          suffices ℝ ∙ ((ra - rb) • u) = ℝ ∙ (((rc - rd) * w) • u) by simpa [sub_mul, ← mul_assoc]
+          rw [Submodule.span_singleton_smul_eq (by simp [hab0])]
+          rw [Submodule.span_singleton_smul_eq (by simp [hcd0, hw0])]
         · refine ⟨c, ?_, hcl⟩
-          apply Set.mem_of_subset_of_mem (affineSpan_pair_le_of_mem_of_mem hal hbl)
           change c ∈ line[ℝ, a, b]
           rw [mem_affineSpan_pair_iff_exists_lineMap_eq, ha, hb, hc]
           simp_rw [← vadd_eq_add, ← AffineMap.lineMap_vadd, AffineMap.lineMap_apply_module,
