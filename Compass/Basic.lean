@@ -743,6 +743,128 @@ theorem system_two_y {x y a b c d e f : ℝ}
 
 local notation "Cℝ(" s ")" =>
   constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ
+local notation "Cℝ*(" s ")" =>
+  constructibleClosure (Subfield.closure s) ℝ
+
+theorem system_two_mem {s : Set ℝ} {x y a b c d e f : ℝ}
+    (h1 : x ^ 2 + a * x + y ^ 2 + b * y = c)
+    (h2 : d * x + e * y = f)
+    (hde : d ≠ 0 ∨ e ≠ 0)
+    (ha : a ∈ Cℝ*(s))
+    (hb : b ∈ Cℝ*(s))
+    (hc : c ∈ Cℝ*(s))
+    (hd : d ∈ Cℝ*(s))
+    (he : e ∈ Cℝ*(s))
+    (hf : f ∈ Cℝ*(s)) :
+    x ∈ Cℝ*(s) ∧ y ∈ Cℝ*(s) := by
+  have hde : 2 * (d ^ 2 + e ^ 2) ≠ 0 := by
+    suffices d ^ 2 + e ^ 2 ≠ 0 by simpa
+    grind [add_eq_zero_iff_of_nonneg (sq_nonneg d) (sq_nonneg e)]
+  have hx := system_two_x h1 h2
+  have hy := system_two_y h1 h2
+  constructor
+  · have h : a * e ^ 2 - b * d * e - 2 * d * f ∈ Cℝ*(s) := by
+      apply sub_mem
+      · apply sub_mem
+        · exact mul_mem ha (pow_mem he _)
+        · exact mul_mem (mul_mem hb hd) he
+      · exact mul_mem (mul_mem (by simp) hd) hf
+    suffices 2 * (d ^ 2 + e ^ 2) * x + (a * e ^ 2 - b * d * e - 2 * d * f) ∈ Cℝ*(s) by
+      set g := 2 * (d ^ 2 + e ^ 2) * x + (a * e ^ 2 - b * d * e - 2 * d * f) with hg
+      convert_to (2 * (d ^ 2 + e ^ 2)) ⁻¹ * (g - (a * e ^ 2 - b * d * e - 2 * d * f)) ∈ Cℝ*(s)
+      · rw [hg, add_sub_cancel_right, inv_mul_cancel_left₀ hde]
+      apply mul_mem
+      · exact inv_mem (mul_mem (by simp) (add_mem (pow_mem hd _) (pow_mem he _)))
+      · exact sub_mem this h
+    apply mem_constructibleClosure_of_sq_mem
+    rw [hx]
+    apply add_mem
+    · apply mul_mem
+      · apply mul_mem (by simp)
+        apply add_mem (pow_mem hd _) (pow_mem he _)
+      · apply sub_mem
+        · apply sub_mem
+          · exact mul_mem (pow_mem he _) hc
+          · exact pow_mem hf _
+        · exact mul_mem (mul_mem hb he) hf
+    · exact pow_mem h _
+  · have h : b * d ^ 2 - a * d * e - 2 * e * f ∈ Cℝ*(s) := by
+      apply sub_mem
+      · apply sub_mem
+        · exact mul_mem hb (pow_mem hd _)
+        · exact mul_mem (mul_mem ha hd) he
+      · exact mul_mem (mul_mem (by simp) he) hf
+    suffices 2 * (d ^ 2 + e ^ 2) * y + (b * d ^ 2 - a * d * e - 2 * e * f) ∈ Cℝ*(s) by
+      set g := 2 * (d ^ 2 + e ^ 2) * y + (b * d ^ 2 - a * d * e - 2 * e * f) with hg
+      convert_to (2 * (d ^ 2 + e ^ 2)) ⁻¹ * (g - (b * d ^ 2 - a * d * e - 2 * e * f)) ∈ Cℝ*(s)
+      · rw [hg, add_sub_cancel_right, inv_mul_cancel_left₀ hde]
+      apply mul_mem
+      · exact inv_mem (mul_mem (by simp) (add_mem (pow_mem hd _) (pow_mem he _)))
+      · exact sub_mem this h
+    apply mem_constructibleClosure_of_sq_mem
+    rw [hy]
+    apply add_mem
+    · apply mul_mem
+      · apply mul_mem (by simp)
+        apply add_mem (pow_mem hd _) (pow_mem he _)
+      · apply sub_mem
+        · apply sub_mem
+          · exact mul_mem (pow_mem hd _) hc
+          · exact pow_mem hf _
+        · exact mul_mem (mul_mem ha hd) hf
+    · exact pow_mem h _
+
+theorem collinear_of_mem {a b p : ℂ} {l : AffineSubspace ℝ ℂ} (hl : Module.finrank ℝ ↥l.direction = 1)
+    (ha : a ∈ l) (hb : b ∈ l) (hp : p ∈ l) :
+    Collinear ℝ {a, b, p} := by
+  rw [collinear_iff_finrank_le_one, ← hl, ← direction_affineSpan]
+  apply Submodule.finrank_mono
+  apply AffineSubspace.direction_le
+  apply affineSpan_le_of_subset_coe
+  grind [SetLike.mem_coe]
+
+theorem equation_of_collinear {a b p : ℂ} (habp : Collinear ℝ {a, b, p}) :
+    (a.im - b.im) * p.re + (b.re - a.re) * p.im = a.re * (a.im - b.im) - a.im * (a.re - b.re) := by
+  rw [collinear_iff_of_mem (show p ∈ {a, b, p} by simp)] at habp
+  obtain ⟨v, hv⟩ := habp
+  obtain ⟨ra, ha⟩ := hv a (by simp)
+  obtain ⟨rb, hb⟩ := hv b (by simp)
+  simp only [Complex.real_smul, vadd_eq_add] at ha hb
+  simp [congr(Complex.re $ha), congr(Complex.re $hb),
+    congr(Complex.im $ha), congr(Complex.im $hb)]
+  ring
+
+theorem system_one_mem {s : Set ℝ} {x y a b c d e f : ℝ}
+    (h1 : a * x + b * y = c)
+    (h2 : d * x + e * y = f)
+    (hdet : a * e ≠ b * d)
+    (ha : a ∈ Cℝ*(s))
+    (hb : b ∈ Cℝ*(s))
+    (hc : c ∈ Cℝ*(s))
+    (hd : d ∈ Cℝ*(s))
+    (he : e ∈ Cℝ*(s))
+    (hf : f ∈ Cℝ*(s)) :
+    x ∈ Cℝ*(s) ∧ y ∈ Cℝ*(s) := by
+  have h3 : (a * e - b * d) * x = c * e - f * b := by
+    linear_combination e * h1 - b * h2
+  have h4 : (a * e - b * d) * y = f * a - c * d := by
+    linear_combination a * h2 - d * h1
+  constructor
+  · suffices (a * e - b * d)⁻¹ * ((a * e - b * d) * x) ∈ Cℝ*(s) by
+      rw [inv_mul_cancel_left₀ (by simpa [sub_eq_zero] using hdet)] at this
+      exact this
+    rw [h3]
+    refine mul_mem (inv_mem ?_) ?_
+    · apply sub_mem (mul_mem ha he) (mul_mem hb hd)
+    · apply sub_mem (mul_mem hc he) (mul_mem hf hb)
+  · suffices (a * e - b * d)⁻¹ * ((a * e - b * d) * y) ∈ Cℝ*(s) by
+      rw [inv_mul_cancel_left₀ (by simpa [sub_eq_zero] using hdet)] at this
+      exact this
+    rw [h4]
+    refine mul_mem (inv_mem ?_) ?_
+    · apply sub_mem (mul_mem ha he) (mul_mem hb hd)
+    · apply sub_mem (mul_mem hf ha) (mul_mem hc hd)
+
 
 theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
     (hinit : ∀ x ∈ initial, conj x ∈ initial) {p : ℂ}
@@ -762,26 +884,104 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
       have hb := Constructible.mem_constructibleClosure hinit hb
       have hc := Constructible.mem_constructibleClosure hinit hc
       have hd := Constructible.mem_constructibleClosure hinit hd
-      have habp : Collinear ℝ {a, b, p} := by
-        rw [collinear_iff_finrank_le_one, ← hl₁, ← direction_affineSpan]
-        apply Submodule.finrank_mono
-        apply AffineSubspace.direction_le
-        apply affineSpan_le_of_subset_coe
-        grind [SetLike.mem_coe]
-      have hcdp : Collinear ℝ {c, d, p} := by
-        rw [collinear_iff_finrank_le_one, ← hl₂, ← direction_affineSpan]
-        apply Submodule.finrank_mono
-        apply AffineSubspace.direction_le
-        apply affineSpan_le_of_subset_coe
-        grind [SetLike.mem_coe]
+      have habpcl := collinear_of_mem hl₁ hal hbl hpl₁
+      have hcdpcl := collinear_of_mem hl₂ hcl hdl hpl₂
+      have habp := equation_of_collinear habpcl
+      have hcdp := equation_of_collinear hcdpcl
       rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ha hb hc hd
-      constructor
-      · apply mem_constructibleClosure_of_mem_subfield
-        sorry
-      · apply mem_constructibleClosure_of_mem_subfield
-        sorry
-  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo => by
-    sorry
+      apply system_one_mem habp hcdp
+      · contrapose h
+        rw [collinear_iff_of_mem (show p ∈ {a, b, p} by simp)] at habpcl
+        rw [collinear_iff_of_mem (show p ∈ {c, d, p} by simp)] at hcdpcl
+        obtain ⟨u, hu⟩ := habpcl
+        obtain ⟨ra, ha⟩ := hu a (by simp)
+        obtain ⟨rb, hb⟩ := hu b (by simp)
+        obtain ⟨v, hv⟩ := hcdpcl
+        obtain ⟨rc, hc⟩ := hv c (by simp)
+        obtain ⟨rd, hd⟩ := hv d (by simp)
+        simp only [Complex.real_smul, vadd_eq_add] at ha hb hc hd
+        rw [congr(Complex.re $ha), congr(Complex.re $hb),
+          congr(Complex.im $ha), congr(Complex.im $hb),
+          congr(Complex.re $hc), congr(Complex.re $hd),
+          congr(Complex.im $hc), congr(Complex.im $hd)] at h
+        simp only [Complex.add_im, Complex.mul_im, Complex.ofReal_re, Complex.ofReal_im, zero_mul,
+          add_zero, add_sub_add_right_eq_sub, Complex.add_re, Complex.mul_re, sub_zero] at h
+        have : (u.re * v.im - u.im * v.re) * (ra - rb) * (rc - rd) = 0 := by
+          linear_combination h
+        have hab0 : ra - rb ≠ 0 := by
+          contrapose hab
+          rw [sub_eq_zero] at hab
+          rw [ha, hb, hab]
+        have hab0' : ra - rb ≠ (0 : ℂ) := by
+          exact_mod_cast hab0
+        have hcd0 : rc - rd ≠ 0 := by
+          contrapose hcd
+          rw [sub_eq_zero] at hcd
+          rw [hc, hd, hcd]
+        have : u.re * v.im - u.im * v.re = 0 := by simpa [hab0, hcd0] using this
+        have huv : ∃ (w : ℝ), w * u = v := by
+          sorry
+        obtain ⟨w, hw⟩ := huv
+        apply AffineSubspace.ext_of_direction_eq
+        · sorry
+        · refine ⟨c, ?_, hcl⟩
+          apply Set.mem_of_subset_of_mem (affineSpan_pair_le_of_mem_of_mem hal hbl)
+          change c ∈ line[ℝ, a, b]
+          rw [mem_affineSpan_pair_iff_exists_lineMap_eq, ha, hb, hc]
+          simp_rw [← vadd_eq_add, ← AffineMap.lineMap_vadd, AffineMap.lineMap_apply_module,
+            Complex.real_smul, ← mul_assoc, ← add_mul, vadd_eq_add, add_left_inj, ← hw]
+          use (ra - rc * w) / (ra - rb)
+          simp only [Complex.ofReal_sub, Complex.ofReal_one, Complex.ofReal_div, Complex.ofReal_mul]
+          grind
+      · exact sub_mem ha.2 hb.2
+      · exact sub_mem hb.1 ha.1
+      · apply sub_mem
+        · exact mul_mem ha.1 (sub_mem ha.2 hb.2)
+        · exact mul_mem ha.2 (sub_mem ha.1 hb.1)
+      · exact sub_mem hc.2 hd.2
+      · exact sub_mem hd.1 hc.1
+      · apply sub_mem
+        · exact mul_mem hc.1 (sub_mem hc.2 hd.2)
+        · exact mul_mem hc.2 (sub_mem hc.1 hd.1)
+  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo =>
+    match ho with
+    | ConstructibleCircle.centerRadius o r ho hr hro =>
+    match hl with
+    | ConstructibleLine.twoPoints a b ha hb hab l hal hbl hl => by
+      rw [EuclideanGeometry.mem_sphere, Complex.dist_eq] at hpo hro
+      have hcircle := congr($(hpo.trans hro.symm) ^ 2)
+      simp_rw [Complex.sq_norm, Complex.normSq_apply, Complex.sub_re, Complex.sub_im] at hcircle
+      set d := (-2) * o.center.re
+      set e := (-2) * o.center.im
+      set f := (r.re - o.center.re) ^ 2 + (r.im - o.center.im) ^ 2
+          - (o.center.re ^ 2 + o.center.im ^ 2)
+      have hcircle : p.re ^ 2 + d * p.re + p.im ^ 2 + e * p.im = f := by
+        linear_combination hcircle
+      have hl := equation_of_collinear <| collinear_of_mem hl hal hbl hpl
+      have ho := Constructible.mem_constructibleClosure hinit ho
+      have hr := Constructible.mem_constructibleClosure hinit hr
+      have ha := Constructible.mem_constructibleClosure hinit ha
+      have hb := Constructible.mem_constructibleClosure hinit hb
+      rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ho hr ha hb
+      apply system_two_mem hcircle hl
+      · contrapose! hab
+        rw [Complex.ext_iff]
+        constructor
+        · symm
+          simpa [sub_eq_zero] using hab.2
+        · simpa [sub_eq_zero] using hab.1
+      · exact mul_mem (by simp) ho.1
+      · exact mul_mem (by simp) ho.2
+      · apply sub_mem
+        · refine add_mem (pow_mem ?_ _) (pow_mem ?_ _)
+          · exact sub_mem hr.1 ho.1
+          · exact sub_mem hr.2 ho.2
+        · exact add_mem (pow_mem ho.1 _) (pow_mem ho.2 _)
+      · exact sub_mem ha.2 hb.2
+      · exact sub_mem hb.1 ha.1
+      · apply sub_mem
+        · exact mul_mem ha.1 (sub_mem ha.2 hb.2)
+        · exact mul_mem ha.2 (sub_mem ha.1 hb.1)
   | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ =>
     match ho₁ with
     | ConstructibleCircle.centerRadius o₁ r₁ ho₁ hr₁ hro₁ =>
@@ -810,45 +1010,32 @@ theorem Constructible.mem_constructibleClosure {initial : Set ℂ}
       have hr₁ := Constructible.mem_constructibleClosure hinit hr₁
       have hr₂ := Constructible.mem_constructibleClosure hinit hr₂
       rw [mem_constructibleClosure_complex_iff hinit] at ⊢ ho₁ ho₂ hr₁ hr₂
-      have hx := system_two_x h1' hline
-      have hy := system_two_y h1' hline
-      have ha : a ∈ Cℝ(initial) := mul_mem (by simp) <| sub_mem ho₁.1 ho₂.1
-      have hb : b ∈ Cℝ(initial) := mul_mem (by simp) <| sub_mem ho₁.2 ho₂.2
-      have hc : c ∈ Cℝ(initial) := by
-        apply sub_mem
+      apply system_two_mem h1' hline
+      · contrapose! h
+        have hcenter : o₁.center = o₂.center := by
+          rw [Complex.ext_iff]
+          constructor
+          · simpa [a, sub_eq_zero] using h.1
+          · simpa [b, sub_eq_zero] using h.2
+        ext
+        · exact hcenter
+        · rw [← hpo₁, ← hpo₂, hcenter]
+      · exact mul_mem (by simp) ho₁.1
+      · exact mul_mem (by simp) ho₁.2
+      · apply sub_mem
+        · refine add_mem (pow_mem ?_ _) (pow_mem ?_ _)
+          · exact sub_mem hr₁.1 ho₁.1
+          · exact sub_mem hr₁.2 ho₁.2
+        · exact add_mem (pow_mem ho₁.1 _) (pow_mem ho₁.2 _)
+      · exact mul_mem (by simp) <| sub_mem ho₁.1 ho₂.1
+      · exact mul_mem (by simp) <| sub_mem ho₁.2 ho₂.2
+      · apply sub_mem
         · refine add_mem ?_ (pow_mem ho₁.2 _)
           refine add_mem ?_ (pow_mem ho₁.1 _)
           exact add_mem (pow_mem (sub_mem hr₂.1 ho₂.1) _) (pow_mem (sub_mem hr₂.2 ho₂.2) _)
         · refine add_mem ?_ (pow_mem ho₂.2 _)
           refine add_mem ?_ (pow_mem ho₂.1 _)
           exact add_mem (pow_mem (sub_mem hr₁.1 ho₁.1) _) (pow_mem (sub_mem hr₁.2 ho₁.2) _)
-      have hd : d ∈ Cℝ(initial) := mul_mem (by simp) ho₁.1
-      have he : e ∈ Cℝ(initial) := mul_mem (by simp) ho₁.2
-      have hf : f ∈ Cℝ(initial) := by
-        apply sub_mem
-        · refine add_mem (pow_mem ?_ _) (pow_mem ?_ _)
-          · exact sub_mem hr₁.1 ho₁.1
-          · exact sub_mem hr₁.2 ho₁.2
-        · exact add_mem (pow_mem ho₁.1 _) (pow_mem ho₁.2 _)
-      constructor
-      · suffices 2 * (a ^ 2 + b ^ 2) * p.re + (d * b ^ 2 - e * a * b - 2 * a * c) ∈ Cℝ(initial) by
-          sorry
-        apply mem_constructibleClosure_of_sq_mem
-        rw [hx]
-        apply add_mem
-        · apply mul_mem
-          · apply mul_mem (by simp)
-            apply add_mem (pow_mem ha _) (pow_mem hb _)
-          · apply sub_mem
-            · apply sub_mem
-              · exact mul_mem (pow_mem hb _) hf
-              · exact pow_mem hc _
-            · exact mul_mem (mul_mem he hb) hc
-        · apply pow_mem
-          apply sub_mem
-          · sorry
-          · sorry
-      sorry
 
 
 theorem not_exist_angle_trisection :
