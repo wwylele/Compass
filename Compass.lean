@@ -1,2 +1,5 @@
-import Compass.Basic
-import Compass.Def
+module
+
+public import Compass.Basic
+public import Compass.ConstructibleClosure
+public import Compass.Def

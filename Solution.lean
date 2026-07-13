@@ -1,4 +1,8 @@
-import Compass
+module
+
+public import Compass
+
+public section
 
 namespace EuclideanGeometry
 

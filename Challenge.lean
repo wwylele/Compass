@@ -1,5 +1,9 @@
-import Mathlib.Geometry.Euclidean.Sphere.Basic
-import Mathlib.Geometry.Euclidean.Angle.Unoriented.Affine
+module
+
+public import Mathlib.Geometry.Euclidean.Sphere.Basic
+public import Mathlib.Geometry.Euclidean.Angle.Unoriented.Affine
+
+public section
 
 namespace EuclideanGeometry
 

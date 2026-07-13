@@ -1,0 +1,51 @@
+# formalization.yaml (v0.3): repo-root metadata for formalization projects.
+# Requiredness/conformance:
+#   - Fields marked [required] should be present and filled.
+#   - Fields not marked [required] are examples/recommended metadata only; they may be omitted.
+#   - Projects may add extra YAML keys at any level. Readers should tolerate unknown keys.
+# This is a lightweight reporting schema, not a closed validation schema.
+
+version: "v0.3"
+
+# project - the formalization itself (not the source).
+project:
+  name: "Compass"                     # [required]
+  authors: ["Weiyi Wang"]                  # [required] who did the formalization
+  license: "Apache-2.0"                  # [required]
+
+# sources - what was formalized. List of papers/textbooks/blueprints/etc.
+sources:                       # [required] list of sources
+
+# project status
+status:
+  scope: "Straightedge and compass construction"                    # describe the scope of the project
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: ["propext", "Quot.sound", "Classical.choice"]                   # list all axioms used (including standard axioms such as `Quot.sound`)
+  main_results:                # list the main results of the project
+  - declaration: "EuclideanGeometry.not_exist_angle_trisection"            # declaration proving this main result
+    file: "Compass/Basic.lean"                   # file containing the declaration
+    sorry_count: 0             # number of sorries used for this declaration
+    axioms: ["propext", "Quot.sound", "Classical.choice"]                 # axioms used for this result
+    comparator_config: "comparator.json"      # path to the comparator (leanprover/comparator) JSON config that verifies this result
+
+# how it was produced. Extra per-entry fields are allowed.
+automation:                    # [required]
+  methods:                     # one entry per distinct phase/run/tool
+    - method: "autonomous"               # [required] manual | copilot | agent | autonomous | other
+      models: []               # e.g. ["claude-opus-4-7", "gpt-5"]
+      framework: "Aristotle"            # e.g. "Claude Code", "OpenClaw", "LeanCopilot"
+      tool_setup: ""           # tools, harnesses, plugins, orchestration, customizations
+      cost:
+        wall_time: "15 minutes"          # e.g. "3 weeks" or "240 GPU-hours"
+        spend_usd: "0"          # spend for this method, e.g. "$10 API credits"
+        hardware: "API-only"           # GPU count, "API-only", "my laptop", whatever's relevant
+      prompting_notes: ""      # freeform notes/examples about the prompts or task specs used
+  spend_usd: "0"                # total spend across the project, e.g. "$10 API credits" or "subscription-based usage"
+  notes: "5% of the code, marked in the comments"                    # freeform details on the overall process and interaction setup
+
+# review status
+review:
+  status: "self-assessed"                   # [required] unchecked | agent-reviewed | self-assessed | peer-reviewed | author-verified | other/freeform
+  reviewers: []
+  notes: ""                    # more details on the review process
