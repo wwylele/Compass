@@ -1,4 +1,5 @@
 import Mathlib
+import Compass.Def
 
 /-!
 -/
@@ -680,38 +681,6 @@ variable {V V₂ P P₂ : Type*}
 
 mutual
 
-inductive ConstructiblePoint [Fact (Module.finrank ℝ V = 2)] (initial : Set P) : P → Prop
-| given (p : P) (h : p ∈ initial) : ConstructiblePoint initial p
-| twoLines (l₁ l₂ : AffineSubspace ℝ P)
-    (hl₁ : ConstructibleLine initial l₁) (hl₂ : ConstructibleLine initial l₂)
-    (h : l₁ ≠ l₂) (p : P) (hpl₁ : p ∈ l₁) (hpl₂ : p ∈ l₂) :
-    ConstructiblePoint initial p
-| lineCircle (l : AffineSubspace ℝ P) (o : Sphere P)
-    (hl : ConstructibleLine initial l) (ho : ConstructibleCircle initial o)
-    (p : P) (hpl : p ∈ l) (hpo : p ∈ o) :
-    ConstructiblePoint initial p
-| twoCircles (o₁ o₂ : Sphere P)
-    (ho₁ : ConstructibleCircle initial o₁) (ho₂ : ConstructibleCircle initial o₂)
-    (h : o₁ ≠ o₂) (p : P) (hpo₁ : p ∈ o₁) (hpo₂ : p ∈ o₂) :
-    ConstructiblePoint initial p
-
-inductive ConstructibleLine [Fact (Module.finrank ℝ V = 2)] (initial : Set P) :
-    AffineSubspace ℝ P → Prop
-| twoPoints (p₁ p₂ : P) (hp₁ : ConstructiblePoint initial p₁) (hp₂ : ConstructiblePoint initial p₂)
-    (h : p₁ ≠ p₂) (l : AffineSubspace ℝ P) (hp₁l : p₁ ∈ l) (hp₂l : p₂ ∈ l)
-    (hrank : Module.finrank ℝ l.direction = 1) :
-    ConstructibleLine initial l
-
-inductive ConstructibleCircle [Fact (Module.finrank ℝ V = 2)] (initial : Set P) :
-    Sphere P → Prop
-| centerRadius (o : Sphere P) (r : P) (hcenter : ConstructiblePoint initial o.center)
-    (hradius : ConstructiblePoint initial r) (h : r ∈ o) :
-    ConstructibleCircle initial o
-
-end
-
-mutual
-
 theorem ConstructiblePoint.map (f : P →ᵃⁱ[ℝ] P₂) {initial : Set P} {p : P}
     (h : ConstructiblePoint initial p) :
     ConstructiblePoint (f '' initial) (f p) :=
@@ -1278,11 +1247,12 @@ def ratEquivBot [CharZero K] : ℚ ≃+* (⊥ : Subfield K) :=
 
 theorem not_exist_angle_trisection :
     ∃ p₁ p₂ p₃ : P, p₁ ≠ p₂ ∧ p₂ ≠ p₃ ∧ p₁ ≠ p₃ ∧
-    ∀ q₁ q₂ q₃ : P,
-    ConstructiblePoint {p₁, p₂, p₃} q₁ →
-    ConstructiblePoint {p₁, p₂, p₃} q₂ →
-    ConstructiblePoint {p₁, p₂, p₃} q₃ →
-    3 * ∠ q₁ q₂ q₃ ≠ ∠ p₁ p₂ p₃ := by
+    ¬ ∃ q₁ q₂ q₃ : P,
+    ConstructiblePoint {p₁, p₂, p₃} q₁ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₂ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
+    3 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ := by
+  push Not
   have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   let o := Nonempty.some (show Nonempty P from inferInstance)
   let basis : OrthonormalBasis (Fin 2) ℝ V := (stdOrthonormalBasis ℝ V).reindex (finCongr hrank.out)
