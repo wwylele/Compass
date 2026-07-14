@@ -6,6 +6,20 @@ public import Compass.Def
 public import Mathlib
 
 /-!
+
+# Connection between Constructible Points and Numbers
+
+This file connects constructible points and numbers and use it to prove theorem #8
+from Freek Wiedijk's list of 100 theorems.
+
+## Main Declarations
+
+- `ConstructiblePoint.mem_constructibleClosure`: constructible points on the complex plane are in
+  the constructible closure of the conjugate-closed initial points.
+  - TODO prove the converse: constructible numbers are all constructible point if 0 and 1 are give.
+- `EuclideanGeometry.not_exist_angle_trisection`: the impossibility of trisecting the angle.
+- `EuclideanGeometry.not_exist_doubling_cube`: the impossibility of doubling the cube.
+
 -/
 
 public section

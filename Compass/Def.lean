@@ -5,6 +5,23 @@ public import Mathlib.Geometry.Euclidean.Angle.Unoriented.Affine
 
 import Mathlib.Algebra.Module.SpanRank
 
+/-!
+
+# Constructible Points
+
+This file defines three predicates for constructibility using straightedge and compass
+* `EuclideanGeometry.ConstructiblePoint`
+* `EuclideanGeometry.ConstructibleLine`
+* `EuclideanGeometry.ConstructibleCircle`
+
+All these predicates have a paramter `initial : Set P`, the set of initial points one
+can start drawing lines and circles with. Our definition of constructibility does not
+permit arbitrarily choosing a free point on the plane, on a line, or on a circle. nly
+initial points and intersections are considered constructible points.
+
+-/
+
+
 public section
 
 namespace EuclideanGeometry

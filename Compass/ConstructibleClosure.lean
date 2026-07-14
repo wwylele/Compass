@@ -3,6 +3,31 @@ module
 public import Mathlib
 import all Init.Data.Nat.Power2.Basic
 
+/-!
+
+# Constructible Closure
+
+(Real or complex) constructible numbers are those that can be built from integers using
+only the operations of addition, subtraction, multiplication, multiplicative inverse, and
+square roots. This is equivalent to say that a constructible number lies in a series of
+quadratic extensions of rational numbers.
+
+We slightly generalize this concept to any base field `K` and the embient field `L`,
+and define `constructibleClosure` as the `IntermediateField K L` that is the union of all
+iterated quadratic extension of `K`.
+
+## Main Declarations
+
+* `IsIteratedQuadraticExtension K L` is a predicate saying there is a series of quadratic
+  extension from `K` to `L`.
+* `constructibleClosure K L` is the constructible closure of `K` within `L`.
+* `isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure`: the degree of a number in
+  the constructible closure is always a power of two.
+* `mem_constructibleClosure_complex_iff`: the projection of complex constructible numbers
+  on to real and imaginary parts are exactly real constructible numbers.
+
+-/
+
 public section
 
 open ComplexConjugate
