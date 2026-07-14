@@ -563,6 +563,25 @@ theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
       refine div_mem ?_ (by simp)
       exact sub_mem hnorm hxr
 
+theorem re_mem_constructibleClosure {s : Set ℂ} {x : ℂ}
+    (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
+    x.re ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ :=
+  (re_im_subset_constructibleClosure h).1
+
+theorem im_mem_constructibleClosure {s : Set ℂ} {x : ℂ}
+    (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
+    x.im ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ :=
+  (re_im_subset_constructibleClosure h).2
+
+theorem norm_mem_constructibleClosure {s : Set ℂ} {x : ℂ}
+    (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
+    ‖x‖ ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
+  apply mem_constructibleClosure_of_sq_mem
+  rw [Complex.sq_norm, Complex.normSq_apply]
+  refine add_mem (mul_mem ?re ?re) (mul_mem ?im ?im)
+  · exact re_mem_constructibleClosure h
+  · exact im_mem_constructibleClosure h
+
 theorem mem_constructibleClosure_of_real {s : Set ℂ} (h : ∀ x ∈ s, conj x ∈ s) {x : ℝ}
     (hx : x ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) :
     (x : ℂ) ∈ constructibleClosure (Subfield.closure s) ℂ := by

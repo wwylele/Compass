@@ -447,11 +447,55 @@ theorem irreducible_861 :
     · have hx : x = -1 / 8 := by rw [← x.num_div_den, hnum, hdeneq]; simp
       norm_num [hx, map_ofNat] at haeval
 
+theorem irreducible_cube_2 :
+    Irreducible (Polynomial.X ^ 3 - 2 : Polynomial ℚ) := by
+  have hdegeee : (Polynomial.X ^ 3 - 2 : Polynomial ℚ).natDegree = 3 := by
+    compute_degree!
+  have hdegree' : (Polynomial.X ^ 3 - 2 : Polynomial ℤ).natDegree = 3 := by
+    compute_degree!
+  apply Polynomial.irreducible_of_degree_le_three_of_not_isRoot
+  · simp [hdegeee]
+  intro x h
+  have haeval : (Polynomial.X ^ 3 - 2 : Polynomial ℤ).aeval x = 0 := by
+    simpa [map_ofNat, Polynomial.IsRoot.def] using h
+  have hnum : IsFractionRing.num ℤ x ∣ 2 := by simpa using num_dvd_of_is_root haeval
+  have hnum : x.num ∣ 2 := by simpa using x.isFractionRingNum.symm.dvd.trans hnum
+  have hnum2 : x.num.natAbs ≤ 2 := by simpa using Int.natAbs_le_of_dvd_ne_zero hnum (by simp)
+  have hden := den_dvd_of_is_root haeval
+  rw [Polynomial.leadingCoeff, hdegree', Polynomial.coeff_sub] at hden
+  have hden : (IsFractionRing.den ℤ x).val ∣ 1 := by simpa using hden
+  have hden : x.den = 1 := by
+    simpa using x.isFractionRingDen.symm.dvd.trans (Int.natAbs_dvd_natAbs.mpr hden)
+  interval_cases hnumabs : x.num.natAbs
+  · rcases x.num.natAbs_eq with h | h
+    · have hx : x = 0 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = 0 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
+      norm_num [hx, map_ofNat] at haeval
+  · rcases x.num.natAbs_eq with h | h
+    · have hx : x = 1 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = -1 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
+      norm_num [hx, map_ofNat] at haeval
+  · rcases x.num.natAbs_eq with h | h
+    · have hx : x = 2 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
+      norm_num [hx, map_ofNat] at haeval
+    · have hx : x = -2 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
+      norm_num [hx, map_ofNat] at haeval
+
 noncomputable
 def ratEquivBot {K : Type*} [Field K] [CharZero K] : ℚ ≃+* (⊥ : Subfield K) :=
     (algebraMap ℚ K).rangeRestrictFieldEquiv.trans
     (RingEquiv.subfieldCongr Subfield.bot_eq_of_charZero.symm)
 
+theorem re_im_image_01 : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
+  ext x
+  simp
+  grind
+
+theorem Subfield.closrue_01 {K : Type*} [Field K] : Subfield.closure ({0, 1} : Set K) = ⊥ := by
+  refine Subfield.closure_eq_of_le ?_ (by simp)
+  apply Set.pair_subset (by simp) (by simp)
 
 theorem not_exist_angle_trisection :
     ∃ p₁ p₂ p₃ : P, p₁ ≠ p₂ ∧ p₂ ≠ p₃ ∧ p₁ ≠ p₃ ∧
@@ -592,17 +636,9 @@ theorem not_exist_angle_trisection :
   have hw : w ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℂ)) ℂ :=
     div_mem (sub_mem ha hb) (sub_mem hd hb)
   have hwremem : w.re ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℝ)) ℝ := by
-    have h :=  (re_im_subset_constructibleClosure hw).1
-    suffices Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} by
-      rw [this] at h
-      exact h
-    ext x
-    simp
-    grind
-  have hbot : Subfield.closure ({0, 1} : Set ℝ) = ⊥ := by
-    refine Subfield.closure_eq_of_le ?_ (by simp)
-    apply Set.pair_subset (by simp) (by simp)
-  rw [hbot] at hwremem
+    rw [← re_im_image_01]
+    exact re_mem_constructibleClosure hw
+  rw [Subfield.closrue_01] at hwremem
   have hquad : (minpoly (⊥ : Subfield ℝ) w.re).natDegree.isPowerOfTwo :=
     isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hwremem
   let p : Polynomial (⊥ : Subfield ℝ) :=
@@ -630,15 +666,23 @@ theorem not_exist_angle_trisection :
   contrapose! hquad
   decide
 
+theorem dist_homothety_homothety {V : Type*} {P : Type*}
+    [SeminormedAddCommGroup V] [PseudoMetricSpace P] [NormedAddTorsor V P]
+    {𝕜 : Type*} [NormedField 𝕜] [NormedSpace 𝕜 V]
+    (c : P) (r : 𝕜) (a b : P) :
+    dist (AffineMap.homothety c r a) (AffineMap.homothety c r b) = ‖r‖ * dist a b := by
+  simp_rw [dist_eq_norm_vsub, AffineMap.homothety_apply, vadd_vsub_vadd_cancel_right,
+    ← smul_sub, norm_smul, vsub_sub_vsub_cancel_right]
+
 theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     ¬ ∃ c d : P, ConstructiblePoint {a, b} c ∧ ConstructiblePoint {a, b} d ∧
-    2 * dist a b ^ 3 = dist c d ^ 3 := by
+    dist c d ^ 3 = 2 * dist a b ^ 3 := by
   classical
   push Not
   have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   have hab : ‖b -ᵥ a‖ ≠ 0 := by simpa using h.symm
   have hab' : ‖b -ᵥ a‖⁻¹ ≠ 0 := by simpa using h.symm
-  intro c d hc hd
+  intro c d hc hd hdist
   have hc := hc.map_homothety a hab'
   have hd := hd.map_homothety a hab'
   have hinit : (AffineMap.homothety a ‖b -ᵥ a‖⁻¹) '' {a, b} =
@@ -651,14 +695,40 @@ theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     rw [orthonormal_subsingleton_iff]
     simp [v, norm_smul, hab]
   obtain ⟨u, basis, hvu, hbasis⟩ := Orthonormal.exists_orthonormalBasis_extension hv
+  have hfilter : (u.filter (· ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card = 1 := by
+    have h1 : ((u.filter (¬ · ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card) = 1 := by
+      rw [Finset.card_eq_one]
+      use ‖b -ᵥ a‖⁻¹ • (b -ᵥ a)
+      grind
+    suffices (u.filter (· ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card +
+      ((u.filter (¬ · ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card) = 2 by
+      rw [h1] at this
+      grind
+    rw [Finset.card_filter_add_card_filter_not]
+    rw [← Module.finrank_eq_card_finset_basis basis.toBasis]
+    exact hrank.out
+  obtain ⟨j, hj⟩ := Finset.card_eq_one.mp hfilter
+  obtain ⟨hjmem, hjne⟩ : j ∈ u ∧ j ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) := by simpa using hj.ge
   have hmemu : ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) ∈ u := by
     apply Set.mem_of_subset_of_mem hvu
     simp [v]
   let ie : u ≃ Fin 2 := {
     toFun i := if i = ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) then 0 else 1
-    invFun := ![⟨‖b -ᵥ a‖⁻¹ • (b -ᵥ a), hmemu⟩, sorry]
-    left_inv i := sorry
-    right_inv i := sorry
+    invFun := ![⟨‖b -ᵥ a‖⁻¹ • (b -ᵥ a), hmemu⟩, ⟨j, hjmem⟩]
+    left_inv i := by
+      by_cases hi : i = ‖b -ᵥ a‖⁻¹ • (b -ᵥ a)
+      · ext
+        simp [hi]
+      · ext
+        suffices j = i by simpa [hi]
+        symm
+        suffices i.val ∈ ({j} : Finset _) by simpa
+        rw [← hj]
+        simp [hi]
+    right_inv i := by
+      fin_cases i
+      · simp
+      · simpa using hjne
   }
   have hbasis0 : basis ⟨‖b -ᵥ a‖⁻¹ • (b -ᵥ a), hmemu⟩ = ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) := by
     simp [hbasis]
@@ -675,6 +745,41 @@ theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     rw [← hbasis0, OrthonormalBasis.equiv_apply_basis]
     simp [ie]
   rw [hinit'] at hc hd
-  sorry
+  set c' := e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)
+  set d' := e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ d)
+  have hstar : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
+  have hc' := hc.mem_constructibleClosure hstar
+  have hd' := hd.mem_constructibleClosure hstar
+  have hcd : dist c' d' ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℝ)) ℝ := by
+    rw [dist_eq_norm_sub]
+    rw [← re_im_image_01]
+    apply norm_mem_constructibleClosure
+    exact sub_mem hc' hd'
+  rw [Subfield.closrue_01] at hcd
+  have hquad : (minpoly (⊥ : Subfield ℝ) (dist c' d')).natDegree.isPowerOfTwo :=
+    isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hcd
+  have hdist : dist c' d' ^ 3 = 2 := by
+    simp_rw [c', d', Isometry.dist_eq (e.isometry), dist_homothety_homothety]
+    rw [mul_pow, hdist, dist_eq_norm_vsub', norm_inv, norm_norm, inv_pow]
+    rw [mul_comm 2, inv_mul_cancel_left₀ (by simpa using h.symm)]
+  let p : Polynomial (⊥ : Subfield ℝ) := Polynomial.X ^ 3 - 2
+  have hp : Irreducible p := by
+    suffices Irreducible (Polynomial.mapEquiv ratEquivBot
+        (Polynomial.X ^ 3 - 2)) by
+      convert this
+      simp [p]
+    exact Irreducible.map _ irreducible_cube_2
+  have hwp : minpoly (⊥ : Subfield ℝ) (dist c' d') ∣ p := by
+    apply minpoly.dvd
+    simp [p, hdist, map_ofNat]
+  have hminpoly : (minpoly (⊥ : Subfield ℝ) (dist c' d')).natDegree = 3 := by
+    apply Polynomial.natDegree_eq_of_degree_eq_some
+    rw [Irreducible.dvd_iff hp] at hwp
+    rw [← Polynomial.degree_eq_degree_of_associated <| Or.resolve_left hwp (minpoly.not_isUnit _ _)]
+    unfold p
+    compute_degree!
+  rw [hminpoly] at hquad
+  contrapose! hquad
+  decide
 
 end EuclideanGeometry

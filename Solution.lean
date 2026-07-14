@@ -19,4 +19,9 @@ theorem _root_.Challenge.not_exist_angle_trisection :
     3 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ :=
   EuclideanGeometry.not_exist_angle_trisection
 
+theorem _root_.Challenge.not_exist_doubling_cube {a b : P} (h : a ≠ b) :
+    ¬ ∃ c d : P, ConstructiblePoint {a, b} c ∧ ConstructiblePoint {a, b} d ∧
+    dist c d ^ 3 = 2 * dist a b ^ 3 :=
+  EuclideanGeometry.not_exist_doubling_cube h
+
 end EuclideanGeometry

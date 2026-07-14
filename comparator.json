@@ -2,7 +2,8 @@
     "challenge_module": "Challenge",
     "solution_module": "Solution",
     "theorem_names": [
-        "Challenge.not_exist_angle_trisection"
+        "Challenge.not_exist_angle_trisection",
+        "Challenge.not_exist_doubling_cube"
     ],
     "permitted_axioms": [
         "propext",

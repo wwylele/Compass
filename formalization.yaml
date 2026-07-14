@@ -28,6 +28,11 @@ status:
     sorry_count: 0             # number of sorries used for this declaration
     axioms: ["propext", "Quot.sound", "Classical.choice"]                 # axioms used for this result
     comparator_config: "comparator.json"      # path to the comparator (leanprover/comparator) JSON config that verifies this result
+  - declaration: "EuclideanGeometry.not_exist_doubling_cube"            # declaration proving this main result
+    file: "Compass/Basic.lean"                   # file containing the declaration
+    sorry_count: 0             # number of sorries used for this declaration
+    axioms: ["propext", "Quot.sound", "Classical.choice"]                 # axioms used for this result
+    comparator_config: "comparator.json"      # path to the comparator (leanprover/comparator) JSON config that verifies this result
 
 # how it was produced. Extra per-entry fields are allowed.
 automation:                    # [required]
