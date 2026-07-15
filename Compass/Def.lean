@@ -4,6 +4,11 @@ public import Mathlib.Geometry.Euclidean.Sphere.Basic
 public import Mathlib.Geometry.Euclidean.Angle.Unoriented.Affine
 
 import Mathlib.Algebra.Module.SpanRank
+import Mathlib.LinearAlgebra.Orientation
+import Mathlib.LinearAlgebra.Dimension.Free
+import Mathlib.Geometry.Euclidean.Angle.Oriented.Rotation
+import Mathlib.Geometry.Euclidean.Angle.Unoriented.RightAngle
+import Mathlib.Geometry.Euclidean.Angle.Oriented.Affine
 
 /-!
 
@@ -273,5 +278,145 @@ theorem ConstructibleCircle.map_homothety (c : P) {r : ℝ} (hr : r ≠ 0) {init
     exact homothety_mem_sphere c r h
 
 end
+
+open scoped Real
+
+nonrec
+theorem ConstructiblePoint.midpoint {initial : Set P} {a b : P} (ha : ConstructiblePoint initial a)
+    (hb : ConstructiblePoint initial b) :
+    ConstructiblePoint initial (midpoint ℝ a b) := by
+  have : IsAddTorsionFree V := IsAddTorsionFree.of_isTorsionFree ℝ V
+  by_cases! hab : a = b
+  · simpa [hab, midpoint_self] using hb
+  have ho1 : ConstructibleCircle initial ⟨a, dist a b⟩ := by
+    apply ConstructibleCircle.centerRadius _ b ha hb
+    rw [dist_comm, mem_sphere]
+  have ho2 : ConstructibleCircle initial ⟨b, dist a b⟩ := by
+    apply ConstructibleCircle.centerRadius _ a hb ha
+    rw [mem_sphere]
+  have hoo : (⟨a, dist a b⟩ : Sphere P) ≠ ⟨b, dist a b⟩ := by simp [hab]
+  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
+  let : Module.Oriented ℝ V _ :=
+    ⟨Module.Basis.orientation (Module.finBasisOfFinrankEq ℝ V hrank.out)⟩
+  have hnorm : ‖√3 / 2‖ ^ 2 + ‖(2⁻¹ : ℝ)‖ ^ 2 = 1 := by
+    rw [Real.norm_eq_abs, ← abs_pow, div_pow]
+    norm_num
+  apply ConstructiblePoint.twoLines line[ℝ, a, b] (AffineSubspace.perpBisector a b)
+  · apply ConstructibleLine.twoPoints a b ha hb hab
+    · apply left_mem_affineSpan_pair
+    · apply right_mem_affineSpan_pair
+    · rw [direction_affineSpan, vectorSpan_pair]
+      apply finrank_span_singleton
+      simpa using hab
+  · apply ConstructibleLine.twoPoints ((√3 / 2) • o.rotation (π / 2 : ℝ) (b -ᵥ a) +ᵥ midpoint ℝ a b)
+        (-(√3 / 2) • o.rotation (π / 2 : ℝ) (b -ᵥ a) +ᵥ midpoint ℝ a b)
+    · apply ConstructiblePoint.twoCircles _ _ ho1 ho2 hoo
+      · rw [mem_sphere]
+        simp only
+        rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+        rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a b) _).mpr ?_]
+        · rw [← sq, ← sq]
+          rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+            mul_pow, (o.rotation ↑(π / 2)).norm_map, left_vsub_midpoint, norm_smul, mul_pow,
+            ← neg_vsub_eq_vsub_rev b a, norm_neg, ← add_mul, invOf_eq_inv]
+          rw [hnorm]
+          simp
+        · apply angle_eq_pi_div_two_of_oangle_eq_pi_div_two
+          rw [EuclideanGeometry.oangle, vadd_vsub, left_vsub_midpoint, ← neg_vsub_eq_vsub_rev b a,
+            smul_neg, o.oangle_neg_right (by simpa using hab.symm) (by simpa using hab.symm),
+            o.oangle_smul_left_of_pos _ _ (by simp),
+            o.oangle_smul_right_of_pos _ _ (by simp),
+            o.oangle_rotation_self_left (by simpa using hab.symm)]
+          rw [← Real.Angle.coe_neg, ← Real.Angle.coe_add]
+          congr
+          ring
+      · rw [mem_sphere]
+        simp only
+        rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+        rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a b) _).mpr ?_]
+        · rw [← sq, ← sq]
+          rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+            mul_pow, (o.rotation ↑(π / 2)).norm_map, right_vsub_midpoint, norm_smul, mul_pow,
+            ← neg_vsub_eq_vsub_rev b a, norm_neg, ← add_mul, invOf_eq_inv]
+          rw [hnorm]
+          simp
+        · apply angle_eq_pi_div_two_of_oangle_eq_neg_pi_div_two
+          rw [EuclideanGeometry.oangle, vadd_vsub, right_vsub_midpoint,
+            o.oangle_smul_left_of_pos _ _ (by simp),
+            o.oangle_smul_right_of_pos _ _ (by simp),
+            o.oangle_rotation_self_left (by simpa using hab.symm)]
+          rw [neg_div, Real.Angle.coe_neg]
+    · apply ConstructiblePoint.twoCircles _ _ ho1 ho2 hoo
+      · rw [mem_sphere]
+        simp only
+        rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+        rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a b) _).mpr ?_]
+        · rw [← sq, ← sq]
+          rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+            mul_pow, (o.rotation ↑(π / 2)).norm_map, left_vsub_midpoint, norm_smul, mul_pow,
+            ← neg_vsub_eq_vsub_rev b a, norm_neg, norm_neg, ← add_mul, invOf_eq_inv]
+          rw [hnorm]
+          simp
+        · apply angle_eq_pi_div_two_of_oangle_eq_neg_pi_div_two
+          rw [EuclideanGeometry.oangle, vadd_vsub, left_vsub_midpoint,
+            o.oangle_smul_left_of_neg _ _ (by simp),
+            ← neg_vsub_eq_vsub_rev b a,
+            smul_neg, ← neg_smul,
+            o.oangle_smul_right_of_neg _ _ (by simp),
+            o.oangle_neg_neg,
+            o.oangle_rotation_self_left (by simpa using hab.symm)]
+          rw [neg_div, Real.Angle.coe_neg]
+      · rw [mem_sphere]
+        simp only
+        rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+        rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a b) _).mpr ?_]
+        · rw [← sq, ← sq]
+          rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+            mul_pow, (o.rotation ↑(π / 2)).norm_map, right_vsub_midpoint, norm_smul, mul_pow,
+            ← neg_vsub_eq_vsub_rev b a, norm_neg, norm_neg, ← add_mul, invOf_eq_inv]
+          rw [hnorm]
+          simp
+        · apply angle_eq_pi_div_two_of_oangle_eq_pi_div_two
+          rw [EuclideanGeometry.oangle, vadd_vsub, right_vsub_midpoint,
+            o.oangle_smul_left_of_neg _ _ (by simp),
+            o.oangle_smul_right_of_pos _ _ (by simp),
+            o.neg_rotation,
+            o.oangle_rotation_self_left (by simpa using hab.symm)]
+          rw [neg_add, Real.Angle.neg_coe_pi, ← Real.Angle.coe_neg, ← Real.Angle.coe_add]
+          congr
+          ring
+    · rw [ne_eq, vadd_right_cancel_iff, neg_smul, self_eq_neg]
+      simpa using hab.symm
+    · apply AffineSubspace.vadd_mem_of_mem_direction
+      · apply Submodule.smul_mem
+        rw [AffineSubspace.direction_perpBisector, Submodule.mem_orthogonal]
+        intro u hu
+        obtain ⟨v, rfl⟩ := Submodule.mem_span_singleton.mp hu
+        rw [real_inner_smul_left, Orientation.inner_rotation_pi_div_two_right, mul_zero]
+      · exact AffineSubspace.midpoint_mem_perpBisector a b
+    · apply AffineSubspace.vadd_mem_of_mem_direction
+      · apply Submodule.smul_mem
+        rw [AffineSubspace.direction_perpBisector, Submodule.mem_orthogonal]
+        intro u hu
+        obtain ⟨v, rfl⟩ := Submodule.mem_span_singleton.mp hu
+        rw [real_inner_smul_left, Orientation.inner_rotation_pi_div_two_right, mul_zero]
+      · exact AffineSubspace.midpoint_mem_perpBisector a b
+    · rw [AffineSubspace.direction_perpBisector]
+      apply Submodule.finrank_orthogonal_span_singleton
+      simpa using hab.symm
+  · intro heq
+    have heq := congr(AffineSubspace.direction $heq)
+    rw [direction_affineSpan, vectorSpan_pair_rev, AffineSubspace.direction_perpBisector] at heq
+    have : ℝ ∙ (b -ᵥ a) = ⊥ := by
+      refine (Submodule.eq_bot_iff _).mpr fun x hx ↦ ?_
+      rw [← inner_self_eq_zero (𝕜 := ℝ) (x := x)]
+      apply Submodule.inner_left_of_mem_orthogonal hx
+      simpa [← heq] using hx
+    absurd this
+    simpa using hab.symm
+  · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+    use ⅟2
+    rfl
+  · exact AffineSubspace.midpoint_mem_perpBisector a b
 
 end EuclideanGeometry
