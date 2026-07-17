@@ -393,6 +393,58 @@ theorem ConstructiblePoint.mem_constructibleClosure {initial : Set ℂ}
           refine add_mem ?_ (pow_mem ho₂.1 _)
           exact add_mem (pow_mem (sub_mem hr₁.1 ho₁.1) _) (pow_mem (sub_mem hr₁.2 ho₁.2) _)
 
+theorem constructiblePoint_of_mem_constructibleClosure {initial : Set ℂ}
+    (h0 : ConstructiblePoint initial 0) (h1 : ConstructiblePoint initial 1) {p : ℂ}
+    (h : p ∈ constructibleClosure (Subfield.closure initial) ℂ) :
+    ConstructiblePoint initial p := by
+  revert h
+  apply constructibleClosure_closure_induction
+  · simp
+  · intro x hx
+    exact ConstructiblePoint.given x hx
+  · exact h1
+  · intro x y hx hy
+    by_cases hxy : x = y
+    · by_cases! hx0 : x = 0
+      · simpa [hx0, ← hxy] using h0
+      apply ConstructiblePoint.lineCircle line[ℝ, x, 0] ⟨x, ‖x‖⟩
+      · apply ConstructibleLine.pair hx h0 hx0
+      · apply ConstructibleCircle.centerRadius _ 0 hx h0
+        simp [mem_sphere]
+      · rw [← hxy, ← vadd_eq_add]
+        apply vadd_mem_affineSpan_of_mem_affineSpan_of_mem_vectorSpan
+        · apply left_mem_affineSpan_pair
+        · simp [vectorSpan_pair]
+      · simp [mem_sphere, hxy]
+    apply ConstructiblePoint.twoCircles ⟨x, ‖y‖⟩ ⟨y, ‖x‖⟩
+    · apply ConstructibleCircle.centerRadius' hx h0 hy
+      simp
+    · apply ConstructibleCircle.centerRadius' hy h0 hx
+      simp
+    · simp [hxy]
+    · simp [mem_sphere]
+    · simp [mem_sphere]
+  · intro x hx
+    by_cases! hx0 : x = 0
+    · simpa [hx0] using h0
+    apply ConstructiblePoint.lineCircle line[ℝ, 0, x] ⟨0, ‖x‖⟩
+    · apply ConstructibleLine.twoPoints 0 x h0 hx
+      · exact hx0.symm
+      · apply left_mem_affineSpan_pair
+      · apply right_mem_affineSpan_pair
+      · rw [direction_affineSpan, vectorSpan_pair]
+        apply finrank_span_singleton
+        simpa using hx0
+    · apply ConstructibleCircle.centerRadius _ x h0 hx
+      simp [mem_sphere]
+    · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+      use -1
+      simp [AffineMap.lineMap_apply_module']
+    · simp [mem_sphere]
+  · sorry
+  · sorry
+  · sorry
+
 
 theorem AffineIsometryEquiv.trans_apply {𝕜 : Type*} {V : Type*} {V₂ : Type*} {V₃ : Type*}
     {P : Type*} {P₂ : Type*} {P₃ : Type*}
