@@ -1,6 +1,6 @@
 # Straightedge and compass construction in Lean
 
-[![Documentation](https://img.shields.io/badge/Documentation-passing-green)](https://wwylele.github.io/Compass/docs/Compass/Basic.html)
+[![Documentation](https://img.shields.io/badge/Documentation-passing-green)](https://wwylele.github.io/Compass/docs/)
 
 This project formalizes some basic theory of [straightedge and compass construction](https://en.wikipedia.org/wiki/Straightedge_and_compass_construction) in Lean,
 including a prove of theorem #8 from Freek Wiedijk's list of 100 theorems.
