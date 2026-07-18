@@ -401,6 +401,12 @@ theorem constructiblePoint_of_mem_constructibleClosure {initial : Set ℂ}
     ConstructibleCircle.centerRadius _ 1 h0 h1 (by simp [mem_sphere])
   have hl01 : ConstructibleLine initial line[ℝ, 0, 1] :=
     ConstructibleLine.pair h0 h1 (by simp)
+  have hn1 : ConstructiblePoint initial (-1) := by
+    apply ConstructiblePoint.lineCircle _ _ hl01 h01
+    · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+      use -1
+      simp [AffineMap.lineMap_apply_module]
+    · simp [mem_sphere]
   have hl0i : ConstructibleLine initial line[ℝ, 0, Complex.I] := by
     apply hl01.ortho h0 (left_mem_affineSpan_pair _ _ _)
     suffices ℝ ∙ Complex.I = (ℝ ∙ 1)ᗮ by simpa [direction_affineSpan, vectorSpan_pair_rev]
@@ -456,7 +462,76 @@ theorem constructiblePoint_of_mem_constructibleClosure {initial : Set ℂ}
       simp [AffineMap.lineMap_apply_module']
     · simp [mem_sphere]
   · intro x hx
-    sorry
+    by_cases hx0 : x = 0
+    · simpa [hx0] using h0
+    apply ConstructiblePoint.lineCircle line[ℝ, 0, x⁻¹] ⟨0, ‖x‖⁻¹⟩ ?_ ?_ _
+        (right_mem_affineSpan_pair _ _ _) (by simp [mem_sphere])
+    · refine ConstructibleLine.twoPoints 0 (conj x) h0 ?_ ?_ _
+          (left_mem_affineSpan_pair _ _ _) ?_ ?_
+      · apply ConstructiblePoint.twoCircles ⟨0, dist x 0⟩ ⟨1, dist x 1⟩
+        · apply ConstructibleCircle.centerRadius _ x h0 hx (by simp [mem_sphere])
+        · apply ConstructibleCircle.centerRadius _ x h1 hx (by simp [mem_sphere])
+        · simp
+        · simp [mem_sphere]
+        · simp [mem_sphere, dist_eq_norm_sub, Complex.norm_eq_sqrt_sq_add_sq]
+      · contrapose hx0
+        simpa using congr(conj $hx0.symm)
+      · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+        use ‖x‖ ^ 2
+        suffices ‖x‖ ^ 2 * x⁻¹ = (starRingEnd ℂ) x by
+          simpa [AffineMap.lineMap_apply_module, ]
+        rw [Complex.inv_def, ← Complex.ofReal_pow, Complex.ofReal_inv,
+          Complex.sq_norm x, mul_comm (conj x), mul_inv_cancel_left₀]
+        simpa using hx0
+      · rw [direction_affineSpan, vectorSpan_pair_rev]
+        apply finrank_span_singleton
+        simpa using hx0
+    · refine ConstructibleCircle.centerRadius _ (-‖x‖⁻¹ : ℂ) h0 ?_ (by simp [mem_sphere])
+      apply ConstructiblePoint.lineCircle _ ⟨(‖x‖ - ‖x‖⁻¹ : ℂ) / 2, (‖x‖ + ‖x‖⁻¹) / 2⟩ hl01
+      · apply ConstructibleCircle.threePoints (‖x‖ : ℂ) Complex.I (-Complex.I)
+        · apply ConstructiblePoint.lineCircle _ ⟨0, ‖x‖⟩ hl01
+          · exact ConstructibleCircle.centerRadius _ x h0 hx (by simp [mem_sphere])
+          · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+            use ‖x‖
+            simp [AffineMap.lineMap_apply_module]
+          · simp [mem_sphere]
+        · apply ConstructiblePoint.lineCircle _ _ hl0i h01 _ (right_mem_affineSpan_pair _ _ _)
+          simp [mem_sphere]
+        · apply ConstructiblePoint.lineCircle _ _ hl0i h01
+          · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+            use -1
+            simp [AffineMap.lineMap_apply_module]
+          · simp [mem_sphere]
+        · intro h
+          have h := congr(Complex.im $h)
+          simp at h
+        · intro h
+          have h := congr(Complex.im $h)
+          simp at h
+        · simp [CharZero.eq_neg_self_iff]
+        · rw [mem_sphere]
+          rw [← sq_eq_sq₀ dist_nonneg (by positivity)]
+          rw [dist_eq_norm_sub, Complex.sq_norm, Complex.normSq_apply]
+          simp
+          ring
+        · rw [mem_sphere]
+          rw [← sq_eq_sq₀ dist_nonneg (by positivity)]
+          rw [dist_eq_norm_sub, Complex.sq_norm, Complex.normSq_apply]
+          simp
+          field
+        · rw [mem_sphere]
+          rw [← sq_eq_sq₀ dist_nonneg (by positivity)]
+          rw [dist_eq_norm_sub, Complex.sq_norm, Complex.normSq_apply]
+          simp
+          field
+      · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+        use -‖x‖⁻¹
+        simp [AffineMap.lineMap_apply_module]
+      · rw [mem_sphere]
+        rw [← sq_eq_sq₀ dist_nonneg (by positivity)]
+        rw [dist_eq_norm_sub, Complex.sq_norm, Complex.normSq_apply]
+        simp
+        ring
   · intro x y hx hy
     by_cases! hx0 : x = 0
     · simpa [hx0] using h0
@@ -563,7 +638,75 @@ theorem constructiblePoint_of_mem_constructibleClosure {initial : Set ℂ}
     · apply right_mem_affineSpan_pair
     · simp [mem_sphere]
   · intro x hx
-    sorry
+    by_cases hx0 : x = 0
+    · simpa [hx0] using h0
+    have hnx2 : ConstructiblePoint initial ‖x ^ 2‖ := by
+      apply ConstructiblePoint.lineCircle _ ⟨0, ‖x ^ 2‖⟩ hl01
+      · apply ConstructibleCircle.centerRadius _ _ h0 hx
+        simp [mem_sphere]
+      · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+        use ‖x ^ 2‖
+        simp [AffineMap.lineMap_apply_module]
+      · simp [mem_sphere]
+    refine ConstructiblePoint.lineCircle line[ℝ, 0, x] ⟨0, ‖x‖⟩ ?_ ?_ _
+        (right_mem_affineSpan_pair _ _ _) (by simp [mem_sphere])
+    · by_cases hxi : -‖x‖ ^ 2 = x ^ 2
+      · rw [← Complex.ofReal_pow, Complex.sq_norm, Complex.normSq_apply, sq] at hxi
+        have hxir := congr(Complex.re $hxi)
+        have hxii := congr(Complex.im $hxi)
+        rw [Complex.mul_re, Complex.neg_re, Complex.ofReal_re] at hxir
+        have : 2 * x.re * x.re = 0 := by linear_combination -hxir
+        have hxr : x.re = 0 := by simpa using this
+        convert hl0i using 1
+        rw [AffineSubspace.eq_iff_direction_eq_of_mem (left_mem_affineSpan_pair _ _ _)
+          (left_mem_affineSpan_pair _ _ _), direction_affineSpan, direction_affineSpan,
+          vectorSpan_pair_rev, vectorSpan_pair_rev]
+        symm
+        rw [Submodule.span_singleton_eq_span_singleton]
+        have hxi0 : x.im ≠ 0 := by
+          contrapose hx0
+          simp [Complex.ext_iff, hxr, hx0]
+        use Units.mk0 x.im hxi0
+        conv_rhs => rw [← Complex.re_add_im x, hxr]
+        simp
+      refine ConstructibleLine.twoPoints 0 (midpoint ℝ (‖x ^ 2‖ : ℂ) (x ^ 2)) h0 ?_ ?_  _
+          (left_mem_affineSpan_pair _ _ _) ?_ ?_
+      · exact hnx2.midpoint hx
+      · symm
+        simpa [midpoint_eq_iff, Equiv.pointReflection_apply] using hxi
+      · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+        use x.re
+        rw [AffineMap.lineMap_apply_module', midpoint_eq_smul_add, invOf_eq_inv,
+          norm_pow, Complex.sq_norm, Complex.normSq_apply, sq, Complex.real_smul, Complex.real_smul,
+          sub_zero, add_zero]
+        apply Complex.ext
+        · simp
+          ring
+        · simp
+          ring
+      · rw [direction_affineSpan, vectorSpan_pair_rev]
+        apply finrank_span_singleton
+        simpa using hx0
+    · refine ConstructibleCircle.centerRadius _ (‖x‖ * Complex.I) h0 ?_ (by simp [mem_sphere])
+      refine ConstructiblePoint.lineCircle _ ⟨(‖x‖ ^ 2 - 1 : ℂ) / 2, (‖x‖ ^ 2 + 1) / 2⟩
+          hl0i ?_ _ ?_ ?_
+      · refine ConstructibleCircle.centerRadius _ _ ?_ hnx2 ?_
+        · convert hn1.midpoint hnx2
+          simp [midpoint_eq_smul_add]
+          ring
+        · rw [mem_sphere]
+          rw [← sq_eq_sq₀ dist_nonneg (by positivity)]
+          rw [dist_eq_norm_sub, Complex.sq_norm, Complex.normSq_apply]
+          simp [← Complex.ofReal_pow]
+          ring
+      · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+        use ‖x‖
+        simp [AffineMap.lineMap_apply_module]
+      · rw [mem_sphere]
+        rw [← sq_eq_sq₀ dist_nonneg (by positivity)]
+        rw [dist_eq_norm_sub, Complex.sq_norm, Complex.normSq_apply]
+        simp [← Complex.ofReal_pow]
+        ring
 
 
 theorem AffineIsometryEquiv.trans_apply {𝕜 : Type*} {V : Type*} {V₂ : Type*} {V₃ : Type*}
