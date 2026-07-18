@@ -9,6 +9,7 @@ import Mathlib.LinearAlgebra.Dimension.Free
 import Mathlib.Geometry.Euclidean.Angle.Oriented.Rotation
 import Mathlib.Geometry.Euclidean.Angle.Unoriented.RightAngle
 import Mathlib.Geometry.Euclidean.Angle.Oriented.Affine
+import Mathlib.Geometry.Euclidean.Sphere.SecondInter
 
 /-!
 
@@ -648,5 +649,33 @@ theorem ConstructibleCircle.centerRadius' {initial : Set P} {o : Sphere P} {q r 
         rw [vadd_vsub, vadd_vsub_assoc, add_comm _ (o.center -ᵥ r), vsub_add_vsub_cancel,
           add_comm]
   · rw [mem_sphere, dist_eq_norm_vsub, vadd_vsub, hor, dist_eq_norm_vsub']
+
+theorem ConstructibleCircle.threePoints {initial : Set P} {o : Sphere P} (p q r : P)
+    (hp : ConstructiblePoint initial p) (hq : ConstructiblePoint initial q)
+    (hr : ConstructiblePoint initial r)
+    (hpq : p ≠ q) (hpr : p ≠ r) (hqr : q ≠ r)
+    (hpo : p ∈ o) (hqo : q ∈ o) (hro : r ∈ o) :
+    ConstructibleCircle initial o := by
+  refine ConstructibleCircle.centerRadius _ p ?_ hp hpo
+  apply ConstructiblePoint.twoLines (AffineSubspace.perpBisector p q)
+    (AffineSubspace.perpBisector q r) (ConstructiblePoint.perpBisector hp hq hpq)
+    (ConstructiblePoint.perpBisector hq hr hqr)
+  · contrapose hpr
+    have hpr := congr((AffineSubspace.direction $hpr)ᗮ)
+    simp_rw [AffineSubspace.direction_perpBisector, Submodule.orthogonal_orthogonal] at hpr
+    have hpl : p ∈ AffineSubspace.mk' q (ℝ ∙ (q -ᵥ p)) := by
+      rw [AffineSubspace.mem_mk', Submodule.mem_span_singleton]
+      use -1
+      simp
+    have hrl : r ∈ AffineSubspace.mk' q (ℝ ∙ (q -ᵥ p)) := by
+      rw [hpr, AffineSubspace.mem_mk']
+      apply Submodule.mem_span_singleton_self
+    have hpeq := (Sphere.eq_or_eq_secondInter_of_mem_mk'_span_singleton_iff_mem hqo hpl).mpr hpo
+    have hreq := (Sphere.eq_or_eq_secondInter_of_mem_mk'_span_singleton_iff_mem hqo hrl).mpr hro
+    rw [hpeq.resolve_left hpq, hreq.resolve_left hqr.symm]
+  · rw [AffineSubspace.mem_perpBisector_iff_dist_eq']
+    rw [mem_sphere.mp hqo, mem_sphere.mp hpo]
+  · rw [AffineSubspace.mem_perpBisector_iff_dist_eq']
+    rw [mem_sphere.mp hqo, mem_sphere.mp hro]
 
 end EuclideanGeometry
