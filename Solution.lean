@@ -1,6 +1,6 @@
 module
 
-public import Compass
+public import Compass.Wiedijk8
 
 public section
 

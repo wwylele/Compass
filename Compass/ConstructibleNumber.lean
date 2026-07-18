@@ -1,7 +1,13 @@
 module
 
-public import Mathlib
+public import Mathlib.FieldTheory.Relrank
+public import Mathlib.Analysis.RCLike.Sqrt
 import all Init.Data.Nat.Power2.Basic
+
+import Mathlib.Algebra.Polynomial.Degree.IsMonicOfDegree
+import Mathlib.FieldTheory.Minpoly.Finite
+import Mathlib.FieldTheory.PrimitiveElement
+import Mathlib.RingTheory.Polynomial.SmallDegreeVieta
 
 /-!
 
@@ -42,6 +48,9 @@ lemma relrank_le_relrank_of_le_left {A B C : IntermediateField K L} (h : A ≤ B
   rw [← relrank_inf_mul_relrank_of_le C h]
   refine le_mul_of_one_le_left' ?_
   rw [← inf_relrank_right A (B ⊓ C), relrank_eq_rank_of_le (inf_le_right : A ⊓ (B ⊓ C) ≤ B ⊓ C)]
+  have : Module.IsTorsionFree ↥(A ⊓ (B ⊓ C)) (extendScalars (inf_le_right : A ⊓ (B ⊓ C) ≤ B ⊓ C))
+      := by
+    apply DivisionSemiring.to_moduleIsTorsionFree
   exact Cardinal.one_le_iff_ne_zero.mpr (rank_pos (R := ↥(A ⊓ (B ⊓ C)))).ne'
 
 -- By Aristotle
@@ -100,35 +109,6 @@ theorem relrank_sup (e f g : IntermediateField K L)
     _ ≤ M.relrank f := h2
     _ ≤ (e ⊓ f).relrank f := h3
     _ = e.relrank f := hinf
-
-instance [StarRing K] [StarRing L] [StarModule K L] : Star (IntermediateField K L) where
-  star f := {
-    __ := star f.toSubalgebra
-    inv_mem' x := by simp
-  }
-
-@[simp]
-theorem coe_star [StarRing K] [StarRing L] [StarModule K L] (f : IntermediateField K L) :
-    (star f : Set L) = star (f : Set L) :=
-  rfl
-
-@[simp]
-theorem mem_star_iff [StarRing K] [StarRing L] [StarModule K L] (f : IntermediateField K L)
-    (x : L) :
-    x ∈ star f ↔ star x ∈ f := by
-  rfl
-
-theorem star_mono [StarRing K] [StarRing L] [StarModule K L] :
-    Monotone (star : IntermediateField K L → IntermediateField K L) := by
-  intro f g h
-  apply Subalgebra.star_mono h
-
-@[simp]
-theorem star_bot [StarRing K] [StarRing L] [StarModule K L] :
-    star (⊥ : IntermediateField K L) = ⊥ := by
-  ext x
-  simp only [mem_star_iff, mem_bot, Set.mem_range]
-  exact ⟨fun ⟨y, h⟩ ↦ ⟨star y, by simp [h]⟩, fun ⟨y, h⟩ ↦ ⟨star y, by simp [h]⟩⟩
 
 end IntermediateField
 

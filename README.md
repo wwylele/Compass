@@ -10,6 +10,6 @@ including a prove of theorem #8 from Freek Wiedijk's list of 100 theorems.
 - `EuclideanGeometry.ConstructiblePoint`: predicate for constructible points using straightedge and compass.
 - `constructibleClosure`: constructible closure of a field. That is, the union of all iterated quadratic extensions of th field.
 - `EuclideanGeometry.ConstructiblePoint.mem_constructibleClosure`: constructible points on the complex plane are in the constructible closure.
-  - TODO: also prove the converse.
+- `EuclideanGeometry.constructiblePoint_of_mem_constructibleClosure`: constructible numbers are all constructible points
 - `EuclideanGeometry.not_exist_angle_trisection`: the impossibility of trisecting the angle.
 - `EuclideanGeometry.not_exist_doubling_cube`: the impossibility of doubling the cube.
