@@ -1,12 +1,15 @@
 module
 
-public import Mathlib.FieldTheory.Relrank
 public import Mathlib.Analysis.RCLike.Sqrt
+public import Mathlib.FieldTheory.Galois.Basic
+public import Mathlib.FieldTheory.Relrank
 import all Init.Data.Nat.Power2.Basic
 
 import Mathlib.Algebra.Polynomial.Degree.IsMonicOfDegree
 import Mathlib.FieldTheory.Minpoly.Finite
 import Mathlib.FieldTheory.PrimitiveElement
+import Mathlib.GroupTheory.Sylow
+import Mathlib.FieldTheory.Galois.IsGaloisGroup
 import Mathlib.RingTheory.Polynomial.SmallDegreeVieta
 
 /-!
@@ -112,6 +115,8 @@ theorem relrank_sup (e f g : IntermediateField K L)
 
 end IntermediateField
 
+open scoped IntermediateField
+
 inductive IsIteratedQuadraticExtension : IntermediateField K L → Prop
 | bot : IsIteratedQuadraticExtension ⊥
 | extension (f g : IntermediateField K L) (hf : IsIteratedQuadraticExtension f)
@@ -129,6 +134,70 @@ match hf with
   apply extension _ _ he hef h
   apply IsIteratedQuadraticExtension.induction P bot extension he
 
+theorem isIteratedQuadraticExtension_of_exists_tower {f : IntermediateField K L}
+    {n : ℕ} (g : Fin (n + 1) → IntermediateField K L) (hbot : g 0 = ⊥) (htop : g (Fin.last n) = f)
+    (hle : ∀ k : Fin n, g k.castSucc ≤ (g k.succ))
+    (h : ∀ k : Fin n, IntermediateField.relrank (g k.castSucc) (g k.succ) = 2) :
+    IsIteratedQuadraticExtension f := by
+  induction n generalizing f with
+  | zero =>
+    rw [← htop, Fin.last_zero, hbot]
+    exact IsIteratedQuadraticExtension.bot
+  | succ n ih =>
+    let g' : Fin (n + 1) → IntermediateField K L := fun k ↦ g k.castSucc
+    refine IsIteratedQuadraticExtension.extension (g' (Fin.last n)) f ?_ ?_ ?_
+    · exact ih g' hbot rfl (fun k ↦ hle k.castSucc) (fun k ↦ h k.castSucc)
+    · rw [← htop]
+      exact hle (Fin.last n)
+    · rw [← htop]
+      exact h (Fin.last n)
+
+theorem Sylow.exists_subgroup_tower {G : Type*} [Group G] {p : ℕ} {n : ℕ} (hp : p.Prime)
+    (h : Nat.card G = p ^ n) :
+    ∃ f : Fin (n + 1) → Subgroup G, (∀ k : Fin (n + 1), Nat.card (f k) = p ^ k.val) ∧
+    (∀ k : Fin n, f k.castSucc ≤ f k.succ) := by
+  induction n generalizing G with
+  | zero =>
+    use ![⊥]
+    simp
+  | succ n ih =>
+    have : Finite G := by
+      apply Nat.finite_of_card_ne_zero
+      simpa [h] using hp.ne_zero
+    have : Fact (Nat.Prime p) := ⟨hp⟩
+    obtain ⟨s, hs⟩ := Sylow.exists_subgroup_card_pow_prime p
+      (show p ^ n ∣ Nat.card G by simp [h, pow_add])
+    obtain ⟨f, h1, h2⟩ := ih hs
+    let f' := fun (k : Fin (n + 2)) ↦
+      if hk : k = Fin.last (n + 1) then
+        ⊤
+      else
+        Subgroup.map s.subtype (f (Fin.castPred k hk))
+    use f'
+    constructor
+    · intro k
+      by_cases hk : k = Fin.last (n + 1)
+      · simpa [f', hk] using h
+      · simp only [hk, ↓reduceDIte, f']
+        rw [Subgroup.card_map_of_injective (Subgroup.subtype_injective _)]
+        apply h1
+    · intro k
+      by_cases hk : k = Fin.last n
+      · suffices f' k.succ = ⊤ by simp [this]
+        have hk' : k.succ = Fin.last (n + 1) := by
+          simp [hk]
+        simp [f', hk']
+      · have hk' : k.succ ≠ Fin.last (n + 1) := by
+          simpa using hk
+        have hk'' : k.castSucc ≠ Fin.last (n + 1) := by
+          simp
+        simp only [hk', hk'', ↓reduceDIte, f']
+        simp only [Subgroup.map_subtype_le_map_subtype]
+        convert h2 (k.castPred hk)
+        · simp
+        · ext
+          simp
+
 theorem IsIteratedQuadraticExtension.isPowerOfTwo_finrank {f : IntermediateField K L}
     (hf : IsIteratedQuadraticExtension f) :
     (Module.finrank K f).isPowerOfTwo :=
@@ -139,6 +208,49 @@ match hf with
   rw [← IntermediateField.finrank_bot_mul_relfinrank hef,
     IntermediateField.relfinrank_eq_toNat_relrank e f, h, Cardinal.toNat_ofNat]
   exact Nat.isPowerOfTwo_mul_two_of_isPowerOfTwo he.isPowerOfTwo_finrank
+
+theorem isIteratedQuadraticExtension_iff_isPowerOfTwo_finrank {f : IntermediateField K L}
+    (hf : IsGalois K f) :
+    IsIteratedQuadraticExtension f ↔ (Module.finrank K f).isPowerOfTwo where
+  mp := IsIteratedQuadraticExtension.isPowerOfTwo_finrank
+  mpr h := by
+    obtain ⟨n, hn⟩ := h
+    have : FiniteDimensional K f := by
+      apply Module.finite_of_finrank_pos
+      rw [Nat.pos_iff_ne_zero]
+      contrapose hn
+      grind
+    have hcard : Nat.card Gal(f/K) = 2 ^ n := by
+      rw [IsGalois.card_aut_eq_finrank]
+      exact hn
+    obtain ⟨s, hs1, hs2⟩ := Sylow.exists_subgroup_tower Nat.prime_two hcard
+    have hle (k : Fin n) : IntermediateField.fixedField (s k.castSucc.rev) ≤
+        IntermediateField.fixedField (s k.succ.rev) := by
+      apply IntermediateField.fixedField_le
+      rw [Fin.rev_succ, Fin.rev_castSucc]
+      apply hs2
+    apply isIteratedQuadraticExtension_of_exists_tower
+      (fun k ↦ IntermediateField.lift (IntermediateField.fixedField (s (Fin.rev k))))
+    · have : s (Fin.last n) = ⊤ := by
+        apply Subgroup.eq_top_of_card_eq
+        rw [hcard, hs1]
+        simp
+      simp [this]
+    · have : s 0 = ⊥ := by
+        apply Subgroup.eq_bot_of_card_eq
+        simp [hs1]
+      simp [this]
+    · intro k
+      apply IntermediateField.map_mono _ (hle k)
+    · intro k
+      unfold IntermediateField.lift
+      rw [IntermediateField.relrank_map_map]
+      have h := IntermediateField.relfinrank_mul_finrank_top (hle k)
+      simp_rw [IntermediateField.finrank_fixedField_eq_card, hs1] at h
+      rw [← Cardinal.toNat_eq_ofNat, ← IntermediateField.relfinrank_eq_toNat_relrank]
+      rw [Nat.eq_div_of_mul_eq_left (by simp) h]
+      rw [Nat.pow_div (by grind) (by simp)]
+      grind
 
 theorem Nat.isPowerOfTwo.dvd {m n : ℕ} (h : n.isPowerOfTwo) (hdvd : m ∣ n) :
     m.isPowerOfTwo := by
@@ -352,6 +464,29 @@ theorem isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure
     (minpoly K x).natDegree.isPowerOfTwo := by
   obtain ⟨f, hf, hx⟩ := mem_constructibleClosure.mp hx
   exact hf.isPowerOfTwo_natDegree_minpoly hx
+
+theorem isPowerOfTwo_finrank_adjoin_of_mem_constructibleClosure
+    {x : L} (hx : x ∈ constructibleClosure K L) :
+    (Module.finrank K K⟮x⟯).isPowerOfTwo := by
+  obtain ⟨f, hf, hx⟩ := mem_constructibleClosure.mp hx
+  apply hf.isPowerOfTwo_finrank.dvd
+  apply IntermediateField.finrank_dvd_of_le_right
+  simpa using hx
+
+theorem mem_constructibleClosure_iff_isPowerOfTwo_finrank_adjoin
+    {x : L} (hx : IsGalois K K⟮x⟯) :
+    x ∈ constructibleClosure K L ↔ (Module.finrank K K⟮x⟯).isPowerOfTwo := by
+  constructor
+  · intro h
+    rw [mem_constructibleClosure] at h
+    obtain ⟨f, hf, hx⟩ := h
+    apply hf.isPowerOfTwo_finrank.dvd
+    apply IntermediateField.finrank_dvd_of_le_right
+    simpa [IntermediateField.adjoin_le_iff] using hx
+  · intro h
+    rw [← isIteratedQuadraticExtension_iff_isPowerOfTwo_finrank hx] at h
+    rw [mem_constructibleClosure]
+    exact ⟨_, h, IntermediateField.mem_adjoin_of_mem _ (by simp)⟩
 
 theorem mem_constructibleClosure_of_mem_subfield {x : L} {K : Subfield L} (h : x ∈ K) :
     x ∈ constructibleClosure K L := by
