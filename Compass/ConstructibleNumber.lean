@@ -6,12 +6,12 @@ public import Mathlib.FieldTheory.Relrank
 import all Init.Data.Nat.Power2.Basic
 
 import Mathlib.Algebra.Polynomial.Degree.IsMonicOfDegree
+import Mathlib.FieldTheory.Galois.IsGaloisGroup
 import Mathlib.FieldTheory.Minpoly.Finite
+import Mathlib.FieldTheory.PrimeField
 import Mathlib.FieldTheory.PrimitiveElement
 import Mathlib.GroupTheory.Sylow
-import Mathlib.FieldTheory.Galois.IsGaloisGroup
 import Mathlib.RingTheory.Polynomial.SmallDegreeVieta
-
 /-!
 
 # Constructible Closure
@@ -41,7 +41,7 @@ public section
 
 open ComplexConjugate
 
-variable {K L : Type*} [Field K] [Field L] [Algebra K L]
+variable {K K' L : Type*} [Field K] [Field K'] [Field L] [Algebra K L] [Algebra K' L]
 
 namespace IntermediateField
 
@@ -772,3 +772,75 @@ theorem mem_constructibleClosure_complex_iff {s : Set ℂ} (h : ∀ x ∈ s, con
       · exact mem_constructibleClosure_of_real h hx.2
       · apply mem_constructibleClosure_of_sq_mem
         simp
+
+theorem IsIteratedQuadraticExtension.transfer
+    (hK : (algebraMap K L).fieldRange = (algebraMap K' L).fieldRange)
+    {f : IntermediateField K L} {f' : IntermediateField K' L}
+    (h : IsIteratedQuadraticExtension f) (hf : f.toSubfield = f'.toSubfield) :
+    IsIteratedQuadraticExtension f' :=
+match h with
+| IsIteratedQuadraticExtension.bot => by
+  rw [IntermediateField.bot_toSubfield, hK, ← IntermediateField.bot_toSubfield,
+    IntermediateField.toSubfield_inj] at hf
+  rw [← hf]
+  exact IsIteratedQuadraticExtension.bot
+| IsIteratedQuadraticExtension.extension e f he hef h => by
+  let e' : IntermediateField K' L := (e.toSubfield.toIntermediateField (by
+    intro x
+    apply mem_of_le_of_mem ?_ (RingHom.mem_fieldRange_self _ x)
+    rw [← hK]
+    apply IntermediateField.fieldRange_le
+  ))
+  apply IsIteratedQuadraticExtension.extension e'
+  · apply IsIteratedQuadraticExtension.transfer hK he
+    simp [e']
+  · change e'.toSubfield ≤ f'.toSubfield
+    rw [← hf]
+    simp only [Subfield.toIntermediateField_toSubfield, e']
+    exact hef
+  · unfold IntermediateField.relrank at ⊢ h
+    rw [← hf]
+    simp only [Subfield.toIntermediateField_toSubfield, e']
+    exact h
+
+theorem IsIteratedQuadraticExtension.transfer_iff
+    (hK : (algebraMap K L).fieldRange = (algebraMap K' L).fieldRange)
+    {f : IntermediateField K L} {f' : IntermediateField K' L}
+    (hf : f.toSubfield = f'.toSubfield) :
+    IsIteratedQuadraticExtension f ↔ IsIteratedQuadraticExtension f' where
+  mp h := IsIteratedQuadraticExtension.transfer hK h hf
+  mpr h := IsIteratedQuadraticExtension.transfer hK.symm h hf.symm
+
+theorem constructibleClosure_transfer
+    (hK : (algebraMap K L).fieldRange = (algebraMap K' L).fieldRange)
+    {x : L} (h : x ∈ constructibleClosure K L) :
+    x ∈ constructibleClosure K' L := by
+  rw [mem_constructibleClosure] at ⊢ h
+  obtain ⟨f, hf, hxf⟩ := h
+  let f' : IntermediateField K' L := (f.toSubfield.toIntermediateField (by
+    intro x
+    apply mem_of_le_of_mem ?_ (RingHom.mem_fieldRange_self _ x)
+    rw [← hK]
+    apply IntermediateField.fieldRange_le
+  ))
+  use f', IsIteratedQuadraticExtension.transfer hK hf (by simp [f'])
+  change x ∈ f'.toSubfield
+  simpa [f'] using hxf
+
+theorem constructibleClosure_transfer_iff
+    (hK : (algebraMap K L).fieldRange = (algebraMap K' L).fieldRange) {x : L} :
+    x ∈ constructibleClosure K L ↔ x ∈ constructibleClosure K' L where
+  mp := constructibleClosure_transfer hK
+  mpr := constructibleClosure_transfer hK.symm
+
+theorem constructibleClosure_transfer_ℚ_01 [CharZero L] {x : L} :
+    x ∈ constructibleClosure ℚ L ↔ x ∈
+    constructibleClosure (Subfield.closure {0, 1} : Subfield L) L := by
+  apply constructibleClosure_transfer_iff
+  rw [← Subfield.bot_eq_of_charZero]
+  rw [Subfield.algebraMap_ofSubfield, Subfield.fieldRange_subtype]
+  symm
+  refine Subfield.closure_eq_of_le ?_ bot_le
+  apply Set.pair_subset
+  · simp
+  · simp

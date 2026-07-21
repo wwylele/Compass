@@ -293,4 +293,13 @@ theorem ConstructibleCircle.map_homothety (c : P) {r : ℝ} (hr : r ≠ 0) {init
 
 end
 
+theorem constructiblePoint_iff_homothety (c : P) {r : ℝ} (hr : r ≠ 0) {initial : Set P} {p : P} :
+    ConstructiblePoint (homothety c r '' initial) (homothety c r p) ↔
+    ConstructiblePoint initial p where
+  mp h := by
+    have h := h.map_homothety c (inv_ne_zero hr)
+    simp_rw [Set.image_image, ← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hr] at h
+    simpa using h
+  mpr := ConstructiblePoint.map_homothety c hr
+
 end EuclideanGeometry

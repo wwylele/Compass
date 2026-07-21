@@ -707,4 +707,11 @@ theorem constructiblePoint_of_mem_constructibleClosure {initial : Set ℂ}
         simp [← Complex.ofReal_pow]
         ring
 
+theorem constructiblePoint_iff_mem_constructibleClosure {initial : Set ℂ}
+    (hinit : ∀ x ∈ initial, conj x ∈ initial)
+    (h0 : ConstructiblePoint initial 0) (h1 : ConstructiblePoint initial 1) {p : ℂ} :
+    ConstructiblePoint initial p ↔ p ∈ constructibleClosure (Subfield.closure initial) ℂ where
+  mp h := h.mem_constructibleClosure hinit
+  mpr h := constructiblePoint_of_mem_constructibleClosure h0 h1 h
+
 end EuclideanGeometry

@@ -1,5 +1,6 @@
 module
 
+public import Compass.Basis
 public import Compass.CommonConstruction
 public import Compass.ConstructibleNumber
 public import Compass.ConstructiblePoint

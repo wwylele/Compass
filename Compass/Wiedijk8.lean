@@ -1,5 +1,6 @@
 module
 
+public import Compass.Basis
 public import Compass.Equivalence
 
 import Mathlib.Algebra.Polynomial.SpecificDegree
@@ -32,15 +33,6 @@ namespace EuclideanGeometry
 variable {V P : Type*}
   [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
   [MetricSpace P] [NormedAddTorsor V P]
-
-theorem AffineIsometryEquiv.trans_apply {𝕜 : Type*} {V : Type*} {V₂ : Type*} {V₃ : Type*}
-    {P : Type*} {P₂ : Type*} {P₃ : Type*}
-    [NormedField 𝕜] [SeminormedAddCommGroup V] [NormedSpace 𝕜 V]
-    [PseudoMetricSpace P] [NormedAddTorsor V P] [SeminormedAddCommGroup V₂]
-    [NormedSpace 𝕜 V₂] [PseudoMetricSpace P₂] [NormedAddTorsor V₂ P₂]
-    [SeminormedAddCommGroup V₃] [NormedSpace 𝕜 V₃] [PseudoMetricSpace P₃]
-    [NormedAddTorsor V₃ P₃] (e₁ : P ≃ᵃⁱ[𝕜] P₂) (e₂ : P₂ ≃ᵃⁱ[𝕜] P₃) (x : P) :
-    e₁.trans e₂ x = e₂ (e₁ x) := rfl
 
 @[simp]
 theorem arccos_half : Real.arccos 2⁻¹ = π / 3 := by
@@ -343,60 +335,12 @@ theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     rw [Set.image_pair]
     simp [AffineMap.homothety_apply]
   rw [hinit] at hc hd
-  let v : Set V := {‖b -ᵥ a‖⁻¹ • (b -ᵥ a)}
-  have hv : Orthonormal ℝ ((↑) : v → V) := by
-    rw [orthonormal_subsingleton_iff]
-    simp [v, norm_smul, hab]
-  obtain ⟨u, basis, hvu, hbasis⟩ := Orthonormal.exists_orthonormalBasis_extension hv
-  have hfilter : (u.filter (· ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card = 1 := by
-    have h1 : ((u.filter (¬ · ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card) = 1 := by
-      rw [Finset.card_eq_one]
-      use ‖b -ᵥ a‖⁻¹ • (b -ᵥ a)
-      grind
-    suffices (u.filter (· ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card +
-      ((u.filter (¬ · ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a))).card) = 2 by
-      rw [h1] at this
-      grind
-    rw [Finset.card_filter_add_card_filter_not]
-    rw [← Module.finrank_eq_card_finset_basis basis.toBasis]
-    exact hrank.out
-  obtain ⟨j, hj⟩ := Finset.card_eq_one.mp hfilter
-  obtain ⟨hjmem, hjne⟩ : j ∈ u ∧ j ≠ ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) := by simpa using hj.ge
-  have hmemu : ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) ∈ u := by
-    apply Set.mem_of_subset_of_mem hvu
-    simp [v]
-  let ie : u ≃ Fin 2 := {
-    toFun i := if i = ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) then 0 else 1
-    invFun := ![⟨‖b -ᵥ a‖⁻¹ • (b -ᵥ a), hmemu⟩, ⟨j, hjmem⟩]
-    left_inv i := by
-      by_cases hi : i = ‖b -ᵥ a‖⁻¹ • (b -ᵥ a)
-      · ext
-        simp [hi]
-      · ext
-        suffices j = i by simpa [hi]
-        symm
-        suffices i.val ∈ ({j} : Finset _) by simpa
-        rw [← hj]
-        simp [hi]
-    right_inv i := by
-      fin_cases i
-      · simp
-      · simpa using hjne
-  }
-  have hbasis0 : basis ⟨‖b -ᵥ a‖⁻¹ • (b -ᵥ a), hmemu⟩ = ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) := by
-    simp [hbasis]
-  let e : P ≃ᵃⁱ[ℝ] ℂ :=
-    (AffineIsometryEquiv.vaddConst ℝ a).symm.trans
-    (basis.equiv Complex.orthonormalBasisOneI ie).toAffineIsometryEquiv
+  let e : P ≃ᵃⁱ[ℝ] ℂ := equivComplex a (‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a) (by
+    simp [dist_eq_norm_vsub', norm_smul, hab]
+  )
   rw [ConstructiblePoint.map_iff e] at hc hd
   have hinit' : e '' {a, ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a} = {0, 1} := by
-    rw [Set.image_pair]
-    congrm {?_, ?_}
-    · simp [e]
-    simp_rw [e, AffineIsometryEquiv.trans_apply, AffineIsometryEquiv.coe_vaddConst_symm,
-      vadd_vsub, LinearIsometryEquiv.coe_toAffineIsometryEquiv]
-    rw [← hbasis0, OrthonormalBasis.equiv_apply_basis]
-    simp [ie]
+    rw [Set.image_pair, equivComplex_left, equivComplex_right]
   rw [hinit'] at hc hd
   set c' := e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)
   set d' := e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ d)

@@ -1,8 +1,11 @@
 module
 
-public import Compass.ConstructibleNumber
+public import Compass.Basis
+public import Compass.Equivalence
 public import Mathlib.NumberTheory.Fermat
 import all Init.Data.Nat.Power2.Basic
+
+import Mathlib.Analysis.Complex.Angle
 
 public section
 
@@ -203,3 +206,108 @@ theorem exp_mem_constructibleClosure_iff {n : ℕ} (hn : n ≠ 0) :
   have hirr : Irreducible (Polynomial.cyclotomic n ℚ) :=
     Polynomial.cyclotomic.irreducible_rat (Nat.pos_iff_ne_zero.mpr hn)
   rw [IsCyclotomicExtension.finrank _ hirr]
+
+namespace EuclideanGeometry
+
+variable {V P : Type*}
+  [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
+  [MetricSpace P] [NormedAddTorsor V P]
+
+theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
+    (∃ (c : P), a ≠ c ∧ ConstructiblePoint {a, b} c ∧ ∠ b a c = 2 * π / n) ↔
+    ∃ (k : ℕ) (s : Finset ℕ), (∀ m ∈ s, (Nat.fermatNumber m).Prime) ∧
+      n = 2 ^ k * ∏ m ∈ s, Nat.fermatNumber m := by
+  have hn0 : n ≠ 0 := fun h ↦ by simp [h] at hn
+  rw [← exp_mem_constructibleClosure_iff hn0, constructibleClosure_transfer_ℚ_01,
+    ← constructiblePoint_iff_mem_constructibleClosure (by grind)
+    (ConstructiblePoint.given 0 (by simp)) (ConstructiblePoint.given 1 (by simp))]
+  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
+  have hab : ‖b -ᵥ a‖ ≠ 0 := by simpa using h.symm
+  have hab' : ‖b -ᵥ a‖⁻¹ ≠ 0 := by simpa using h.symm
+  let e : P ≃ᵃⁱ[ℝ] ℂ := equivComplex a (‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a) (by
+    simp [dist_eq_norm_vsub', norm_smul, hab]
+  )
+  have ha : e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) a) = 0 := by
+    rw [AffineMap.homothety_apply_same]
+    rw [equivComplex_left]
+  have hb : e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) b) = 1 := by
+    rw [AffineMap.homothety_apply]
+    rw [equivComplex_right]
+  have hangle (c : P) : ∠ b a c = ∠ 1 0 (e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)) := by
+    rw [← ha, ← hb]
+    simp_rw [← AffineIsometryEquiv.coe_toAffineIsometry]
+    rw [AffineIsometry.angle_map, EuclideanGeometry.angle_homothety _ _ _ _ hab']
+  conv_lhs =>
+    right; ext c
+    rw [← constructiblePoint_iff_homothety a hab']
+    rw [ConstructiblePoint.map_iff e]
+    rw [Set.image_pair, Set.image_pair, ha, hb]
+    rw [hangle]
+  have hexp : ((↑n)⁻¹ * (2 * π * Complex.I)) = (2 * π / n : ℝ) * Complex.I := by
+    push_cast; ring
+  have h0 : ConstructiblePoint {0, 1} (0 : ℂ) := ConstructiblePoint.given 0 (by simp)
+  have h1 : ConstructiblePoint {0, 1} (1 : ℂ) := ConstructiblePoint.given 1 (by simp)
+  constructor
+  · rintro ⟨c, hac, hc, hangle⟩
+    apply ConstructiblePoint.lineCircle line[ℝ, 0, Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))]
+      ⟨0, 1⟩
+    · apply ConstructibleLine.twoPoints 0
+        (‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖ * Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))) h0
+      · apply ConstructiblePoint.twoCircles ⟨0, ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖⟩
+          ⟨1, dist 1 (e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c))⟩
+        · apply ConstructibleCircle.centerRadius _ _ h0 hc
+          simp [mem_sphere]
+        · apply ConstructibleCircle.centerRadius _ _ h1 hc
+          simp [mem_sphere']
+        · simp
+        · simp only [mem_sphere, dist_zero_right, Complex.norm_mul, Complex.norm_real, norm_norm]
+          rw [hexp, Complex.norm_exp_ofReal_mul_I, mul_one]
+        · simp_rw [mem_sphere']
+
+          sorry
+      ·
+        sorry
+      · apply left_mem_affineSpan_pair
+      · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+        use ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖
+        simp [AffineMap.lineMap_apply_module]
+      ·
+        sorry
+    · exact ConstructibleCircle.centerRadius _ 1 h0 h1 (by simp [mem_sphere])
+    · apply right_mem_affineSpan_pair
+    · rw [mem_sphere, dist_eq_norm_sub, sub_zero, hexp, Complex.norm_exp_ofReal_mul_I]
+  · intro h
+    refine ⟨(AffineMap.homothety a ‖b -ᵥ a‖) <| e.symm <|
+      Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I)), ?_, ?_, ?_⟩
+    · rw [← (AffineMap.homothety_injective a hab').ne_iff]
+      rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab,
+        AffineMap.homothety_one, AffineMap.id_apply]
+      rw [← e.injective.ne_iff, AffineIsometryEquiv.apply_symm_apply]
+      rw [ha]
+      symm
+      simp
+    · rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab, AffineMap.homothety_one,
+        AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply]
+      exact h
+    · rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab, AffineMap.homothety_one,
+        AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply]
+      rw [EuclideanGeometry.angle]
+      simp_rw [vsub_eq_sub, sub_zero]
+      rw [Complex.angle_one_left (by simp)]
+      rw [hexp]
+      rw [Complex.arg_exp_mul_I]
+      rw [(toIocMod_eq_self _).mpr (by
+        simp only [Set.mem_Ioc, le_neg_add_iff_add_le]
+        constructor
+        · trans 0
+          · simpa using Real.pi_pos
+          · positivity
+        · rw [← le_sub_iff_add_le']
+          conv_rhs => rw [two_mul, add_sub_cancel_right]
+          rw [div_le_iff₀' (by simpa using Nat.pos_of_ne_zero hn0)]
+          exact mul_le_mul_of_nonneg_right (by simpa using hn) Real.pi_nonneg
+      )]
+      rw [abs_eq_self]
+      positivity
+
+end EuclideanGeometry
