@@ -6,6 +6,7 @@ public import Mathlib.NumberTheory.Fermat
 import all Init.Data.Nat.Power2.Basic
 
 import Mathlib.Analysis.Complex.Angle
+import Mathlib.Geometry.Euclidean.Triangle
 
 public section
 
@@ -213,6 +214,12 @@ variable {V P : Type*}
   [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
   [MetricSpace P] [NormedAddTorsor V P]
 
+/--
+**Gauss–Wantzel theorem**: A regular $n$-gon can be constructed with straightedge and compass
+if and only if $n$ is a product of a power of 2 and any number of distinct Fermat primes.
+
+Instead of constructing a full polygon, our statement is about constructing the angle $2\pi / n$.
+-/
 theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
     (∃ (c : P), a ≠ c ∧ ConstructiblePoint {a, b} c ∧ ∠ b a c = 2 * π / n) ↔
     ∃ (k : ℕ) (s : Finset ℕ), (∀ m ∈ s, (Nat.fermatNumber m).Prime) ∧
@@ -247,12 +254,35 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
     push_cast; ring
   have h0 : ConstructiblePoint {0, 1} (0 : ℂ) := ConstructiblePoint.given 0 (by simp)
   have h1 : ConstructiblePoint {0, 1} (1 : ℂ) := ConstructiblePoint.given 1 (by simp)
+  have hcangle : ∠ 1 0 (Complex.exp ((↑n)⁻¹ * (2 * ↑π * Complex.I))) = 2 * π / n := by
+    rw [EuclideanGeometry.angle]
+    simp_rw [vsub_eq_sub, sub_zero]
+    rw [Complex.angle_one_left (by simp)]
+    rw [hexp]
+    rw [Complex.arg_exp_mul_I]
+    rw [(toIocMod_eq_self _).mpr (by
+      simp only [Set.mem_Ioc, le_neg_add_iff_add_le]
+      constructor
+      · trans 0
+        · simpa using Real.pi_pos
+        · positivity
+      · rw [← le_sub_iff_add_le']
+        conv_rhs => rw [two_mul, add_sub_cancel_right]
+        rw [div_le_iff₀' (by simpa using Nat.pos_of_ne_zero hn0)]
+        exact mul_le_mul_of_nonneg_right (by simpa using hn) Real.pi_nonneg
+    )]
+    rw [abs_eq_self]
+    positivity
   constructor
   · rintro ⟨c, hac, hc, hangle⟩
+    have hc0 : e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) c) ≠ 0 := by
+      rw [← ha]
+      rw [e.injective.ne_iff, (AffineMap.homothety_injective _ hab').ne_iff]
+      exact hac.symm
     apply ConstructiblePoint.lineCircle line[ℝ, 0, Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))]
       ⟨0, 1⟩
     · apply ConstructibleLine.twoPoints 0
-        (‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖ * Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))) h0
+        (‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖ • Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))) h0
       · apply ConstructiblePoint.twoCircles ⟨0, ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖⟩
           ⟨1, dist 1 (e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c))⟩
         · apply ConstructibleCircle.centerRadius _ _ h0 hc
@@ -260,19 +290,30 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
         · apply ConstructibleCircle.centerRadius _ _ h1 hc
           simp [mem_sphere']
         · simp
-        · simp only [mem_sphere, dist_zero_right, Complex.norm_mul, Complex.norm_real, norm_norm]
+        · simp only [mem_sphere, dist_zero_right, Complex.real_smul, Complex.norm_mul,
+            Complex.norm_real, norm_norm]
           rw [hexp, Complex.norm_exp_ofReal_mul_I, mul_one]
         · simp_rw [mem_sphere']
-
-          sorry
-      ·
-        sorry
+          rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq, sq]
+          conv_lhs => rw [EuclideanGeometry.law_cos 1 0]
+          conv_rhs => rw [EuclideanGeometry.law_cos 1 0]
+          congrm _ + ?d13 * ?d13 - 2 * _ * ?d13 * Real.cos ?angle
+          · simp only [Complex.real_smul, dist_zero_right, Complex.norm_mul, Complex.norm_real,
+              norm_norm]
+            rw [hexp, Complex.norm_exp_ofReal_mul_I, mul_one]
+          · rw [hangle]
+            rw [EuclideanGeometry.angle_smul_right_of_pos
+              (p₄ := Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I)))
+              (r := ‖e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) c)‖) _ (by simpa using hc0) (by simp)]
+            rw [hcangle]
+      · simpa using hc0
       · apply left_mem_affineSpan_pair
       · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
         use ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖
         simp [AffineMap.lineMap_apply_module]
-      ·
-        sorry
+      · rw [direction_affineSpan, vectorSpan_pair_rev]
+        apply finrank_span_singleton
+        simp
     · exact ConstructibleCircle.centerRadius _ 1 h0 h1 (by simp [mem_sphere])
     · apply right_mem_affineSpan_pair
     · rw [mem_sphere, dist_eq_norm_sub, sub_zero, hexp, Complex.norm_exp_ofReal_mul_I]
@@ -290,24 +331,7 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
         AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply]
       exact h
     · rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab, AffineMap.homothety_one,
-        AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply]
-      rw [EuclideanGeometry.angle]
-      simp_rw [vsub_eq_sub, sub_zero]
-      rw [Complex.angle_one_left (by simp)]
-      rw [hexp]
-      rw [Complex.arg_exp_mul_I]
-      rw [(toIocMod_eq_self _).mpr (by
-        simp only [Set.mem_Ioc, le_neg_add_iff_add_le]
-        constructor
-        · trans 0
-          · simpa using Real.pi_pos
-          · positivity
-        · rw [← le_sub_iff_add_le']
-          conv_rhs => rw [two_mul, add_sub_cancel_right]
-          rw [div_le_iff₀' (by simpa using Nat.pos_of_ne_zero hn0)]
-          exact mul_le_mul_of_nonneg_right (by simpa using hn) Real.pi_nonneg
-      )]
-      rw [abs_eq_self]
-      positivity
+        AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply, hcangle]
+
 
 end EuclideanGeometry
