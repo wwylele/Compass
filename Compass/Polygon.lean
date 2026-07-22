@@ -72,7 +72,6 @@ theorem Nat.isPowerOfTwo_and_isPowerOfTwo_sub_one (n : ℕ) :
 theorem Nat.fermatNumber_ne_zero (n : ℕ) :
     n.fermatNumber ≠ 0 := (zero_ne_add_one (2 ^ 2 ^ n)).symm
 
-
 theorem Nat.isPowerOfTwo_totient_iff {n : ℕ} (hn : n ≠ 0) :
     n.totient.isPowerOfTwo ↔ ∃ (k : ℕ) (s : Finset ℕ), (∀ m ∈ s, (Nat.fermatNumber m).Prime) ∧
       n = 2 ^ k * ∏ m ∈ s, Nat.fermatNumber m := by
@@ -177,35 +176,39 @@ theorem Nat.isPowerOfTwo_totient_iff {n : ℕ} (hn : n ≠ 0) :
       use 2 ^ c
       simp [fermatNumber]
 
-theorem exp_mem_constructibleClosure_iff {n : ℕ} (hn : n ≠ 0) :
-    Complex.exp ((n⁻¹ : ℂ) * (2 * π * Complex.I)) ∈ constructibleClosure ℚ ℂ ↔
-    ∃ (k : ℕ) (s : Finset ℕ), (∀ m ∈ s, (Nat.fermatNumber m).Prime) ∧
-      n = 2 ^ k * ∏ m ∈ s, Nat.fermatNumber m := by
-  rw [← Nat.isPowerOfTwo_totient_iff hn]
-  have : NeZero n := ⟨hn⟩
-  have : IsCyclotomicExtension {n} ℚ ℚ⟮Complex.exp ((n⁻¹ : ℂ) * (2 * π * Complex.I))⟯ := by
-    refine (IntermediateField.isCyclotomicExtension_singleton_iff_eq_adjoin n
-      ℚ ℂ ℚ⟮Complex.exp ((n⁻¹ : ℂ) * (2 * π * Complex.I))⟯ ?_).mpr rfl
+theorem exp_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
+    Complex.exp (k * (2 * π * Complex.I)) ∈ constructibleClosure ℚ ℂ ↔
+    k.den.totient.isPowerOfTwo := by
+  have : NeZero k.den := ⟨k.den_ne_zero⟩
+  have : IsCyclotomicExtension {k.den} ℚ ℚ⟮Complex.exp (k * (2 * π * Complex.I))⟯ := by
+    refine (IntermediateField.isCyclotomicExtension_singleton_iff_eq_adjoin k.den
+      ℚ ℂ ℚ⟮Complex.exp (k * (2 * π * Complex.I))⟯ ?_).mpr rfl
     rw [IsPrimitiveRoot.iff_def]
     constructor
-    · rw [← Complex.exp_nat_mul, mul_inv_cancel_left₀ (by simpa using hn),
-        Complex.exp_two_pi_mul_I]
+    · rw [← Complex.exp_nat_mul, ← mul_assoc (k.den : ℂ),
+        show (k.den * k : ℂ) = k.num from mod_cast k.den_mul_eq_num
+      ]
+      rw [Complex.exp_int_mul_two_pi_mul_I]
     · intro l
       rw [← Complex.exp_nat_mul, ← mul_assoc, Complex.exp_eq_one_iff]
       simp_rw [mul_left_inj' (show 2 * π * Complex.I ≠ 0 by simp)]
-      simp_rw [mul_inv_eq_iff_eq_mul₀ (show (n : ℂ) ≠ 0 by simpa using hn)]
       norm_cast
-      rintro ⟨m, h⟩
-      rw [← Int.ofNat_dvd, h]
-      simp
-  have hsplit : Polynomial.IsSplittingField ℚ ℚ⟮Complex.exp ((n⁻¹ : ℂ) * (2 * π * Complex.I))⟯
-      (Polynomial.cyclotomic n ℚ) := by
+      rintro ⟨n, h⟩
+      rw [← Rat.num_div_den k, ← mul_div_assoc, div_eq_iff (mod_cast k.den_ne_zero)] at h
+      norm_cast at h
+      have h := dvd_of_mul_left_eq _ h.symm
+      zify
+      apply Int.dvd_of_dvd_mul_left_of_gcd_one h
+      rw [Int.gcd_eq_natAbs_gcd_natAbs, ← Nat.coprime_iff_gcd_eq_one, Nat.coprime_comm]
+      simpa using k.reduced
+  have hsplit : Polynomial.IsSplittingField ℚ ℚ⟮Complex.exp (k * (2 * π * Complex.I))⟯
+      (Polynomial.cyclotomic k.den ℚ) := by
     apply IsCyclotomicExtension.splitting_field_cyclotomic
-  have hgalois : IsGalois ℚ ℚ⟮Complex.exp ((n⁻¹ : ℂ) * (2 * π * Complex.I))⟯ :=
-    IsGalois.of_separable_splitting_field (Polynomial.separable_cyclotomic n ℚ)
+  have hgalois : IsGalois ℚ ℚ⟮Complex.exp (k * (2 * π * Complex.I))⟯ :=
+    IsGalois.of_separable_splitting_field (Polynomial.separable_cyclotomic k.den ℚ)
   rw [mem_constructibleClosure_iff_isPowerOfTwo_finrank_adjoin hgalois]
-  have hirr : Irreducible (Polynomial.cyclotomic n ℚ) :=
-    Polynomial.cyclotomic.irreducible_rat (Nat.pos_iff_ne_zero.mpr hn)
+  have hirr : Irreducible (Polynomial.cyclotomic k.den ℚ) :=
+    Polynomial.cyclotomic.irreducible_rat (Nat.pos_iff_ne_zero.mpr k.den_ne_zero)
   rw [IsCyclotomicExtension.finrank _ hirr]
 
 namespace EuclideanGeometry
@@ -214,18 +217,10 @@ variable {V P : Type*}
   [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
   [MetricSpace P] [NormedAddTorsor V P]
 
-/--
-**Gauss–Wantzel theorem**: A regular $n$-gon can be constructed with straightedge and compass
-if and only if $n$ is a product of a power of 2 and any number of distinct Fermat primes.
-
-Instead of constructing a full polygon, our statement is about constructing the angle $2\pi / n$.
--/
-theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
-    (∃ (c : P), a ≠ c ∧ ConstructiblePoint {a, b} c ∧ ∠ b a c = 2 * π / n) ↔
-    ∃ (k : ℕ) (s : Finset ℕ), (∀ m ∈ s, (Nat.fermatNumber m).Prime) ∧
-      n = 2 ^ k * ∏ m ∈ s, Nat.fermatNumber m := by
-  have hn0 : n ≠ 0 := fun h ↦ by simp [h] at hn
-  rw [← exp_mem_constructibleClosure_iff hn0, constructibleClosure_transfer_ℚ_01,
+theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b : P} (h : a ≠ b) :
+    (∃ (c : P), a ≠ c ∧ ConstructiblePoint {a, b} c ∧ ∠ b a c = 2 * π * k) ↔
+    k.den.totient.isPowerOfTwo := by
+  rw [← exp_mem_constructibleClosure_iff_isPowerOfTwo_totient, constructibleClosure_transfer_ℚ_01,
     ← constructiblePoint_iff_mem_constructibleClosure (by grind)
     (ConstructiblePoint.given 0 (by simp)) (ConstructiblePoint.given 1 (by simp))]
   have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
@@ -250,11 +245,11 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
     rw [ConstructiblePoint.map_iff e]
     rw [Set.image_pair, Set.image_pair, ha, hb]
     rw [hangle]
-  have hexp : ((↑n)⁻¹ * (2 * π * Complex.I)) = (2 * π / n : ℝ) * Complex.I := by
+  have hexp : (k * (2 * π * Complex.I)) = (2 * π * k : ℝ) * Complex.I := by
     push_cast; ring
   have h0 : ConstructiblePoint {0, 1} (0 : ℂ) := ConstructiblePoint.given 0 (by simp)
   have h1 : ConstructiblePoint {0, 1} (1 : ℂ) := ConstructiblePoint.given 1 (by simp)
-  have hcangle : ∠ 1 0 (Complex.exp ((↑n)⁻¹ * (2 * ↑π * Complex.I))) = 2 * π / n := by
+  have hcangle : ∠ 1 0 (Complex.exp (k * (2 * ↑π * Complex.I))) = 2 * π * k := by
     rw [EuclideanGeometry.angle]
     simp_rw [vsub_eq_sub, sub_zero]
     rw [Complex.angle_one_left (by simp)]
@@ -263,13 +258,13 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
     rw [(toIocMod_eq_self _).mpr (by
       simp only [Set.mem_Ioc, le_neg_add_iff_add_le]
       constructor
-      · trans 0
-        · simpa using Real.pi_pos
-        · positivity
+      · grw [← hk0]
+        simpa using Real.pi_pos
       · rw [← le_sub_iff_add_le']
         conv_rhs => rw [two_mul, add_sub_cancel_right]
-        rw [div_le_iff₀' (by simpa using Nat.pos_of_ne_zero hn0)]
-        exact mul_le_mul_of_nonneg_right (by simpa using hn) Real.pi_nonneg
+        grw [hk]
+        apply le_of_eq
+        ring
     )]
     rw [abs_eq_self]
     positivity
@@ -279,10 +274,10 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
       rw [← ha]
       rw [e.injective.ne_iff, (AffineMap.homothety_injective _ hab').ne_iff]
       exact hac.symm
-    apply ConstructiblePoint.lineCircle line[ℝ, 0, Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))]
+    apply ConstructiblePoint.lineCircle line[ℝ, 0, Complex.exp (k * (2 * π * Complex.I))]
       ⟨0, 1⟩
     · apply ConstructibleLine.twoPoints 0
-        (‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖ • Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I))) h0
+        (‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖ • Complex.exp (k * (2 * π * Complex.I))) h0
       · apply ConstructiblePoint.twoCircles ⟨0, ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖⟩
           ⟨1, dist 1 (e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c))⟩
         · apply ConstructibleCircle.centerRadius _ _ h0 hc
@@ -303,7 +298,7 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
             rw [hexp, Complex.norm_exp_ofReal_mul_I, mul_one]
           · rw [hangle]
             rw [EuclideanGeometry.angle_smul_right_of_pos
-              (p₄ := Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I)))
+              (p₄ := Complex.exp (k * (2 * π * Complex.I)))
               (r := ‖e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) c)‖) _ (by simpa using hc0) (by simp)]
             rw [hcangle]
       · simpa using hc0
@@ -319,7 +314,7 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
     · rw [mem_sphere, dist_eq_norm_sub, sub_zero, hexp, Complex.norm_exp_ofReal_mul_I]
   · intro h
     refine ⟨(AffineMap.homothety a ‖b -ᵥ a‖) <| e.symm <|
-      Complex.exp ((↑n)⁻¹ * (2 * π * Complex.I)), ?_, ?_, ?_⟩
+      Complex.exp (k * (2 * π * Complex.I)), ?_, ?_, ?_⟩
     · rw [← (AffineMap.homothety_injective a hab').ne_iff]
       rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab,
         AffineMap.homothety_one, AffineMap.id_apply]
@@ -332,6 +327,24 @@ theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
       exact h
     · rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab, AffineMap.homothety_one,
         AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply, hcangle]
+
+/--
+**Gauss–Wantzel theorem**: A regular $n$-gon can be constructed with straightedge and compass
+if and only if $n$ is a product of a power of 2 and any number of distinct Fermat primes.
+
+Instead of constructing a full polygon, our statement is about constructing the angle $2\pi / n$.
+-/
+theorem constructible_polygon {n : ℕ} (hn : 2 ≤ n) {a b : P} (h : a ≠ b) :
+    (∃ (c : P), a ≠ c ∧ ConstructiblePoint {a, b} c ∧ ∠ b a c = 2 * π * (n⁻¹ : ℝ)) ↔
+    ∃ (k : ℕ) (s : Finset ℕ), (∀ m ∈ s, (Nat.fermatNumber m).Prime) ∧
+      n = 2 ^ k * ∏ m ∈ s, Nat.fermatNumber m := by
+  have hn0 : n ≠ 0 := fun h ↦ by simp [h] at hn
+  rw [← Nat.isPowerOfTwo_totient_iff hn0]
+  convert constructible_angle (show 0 ≤ (n⁻¹ : ℚ) by simp) (by
+    rw [inv_le_inv₀ (by simpa using Nat.pos_of_ne_zero hn0) (by simp)]
+    simpa using hn) h
+  · simp
+  · simp [hn0]
 
 
 end EuclideanGeometry
