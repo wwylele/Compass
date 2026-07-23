@@ -211,6 +211,50 @@ theorem exp_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
     Polynomial.cyclotomic.irreducible_rat (Nat.pos_iff_ne_zero.mpr k.den_ne_zero)
   rw [IsCyclotomicExtension.finrank _ hirr]
 
+theorem cos_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
+    Real.cos (k * (2 * π)) ∈ constructibleClosure ℚ ℝ ↔
+    k.den.totient.isPowerOfTwo := by
+  rw [← exp_mem_constructibleClosure_iff_isPowerOfTwo_totient]
+  rw [constructibleClosure_transfer_ℚ_01]
+  rw [constructibleClosure_transfer_ℚ_01]
+  rw [show k * (2 * π * Complex.I) = (k * (2 * π) : ℝ) * Complex.I by push_cast; ring]
+  have himage : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
+    simp [Set.image_pair]
+  constructor
+  · intro h
+    rw [mem_constructibleClosure_complex_iff (by simp)]
+    constructor
+    · rw [Complex.exp_ofReal_mul_I_re, himage]
+      exact h
+    · rw [Complex.exp_ofReal_mul_I_im, himage]
+      apply mem_constructibleClosure_of_sq_mem
+      rw [Real.sin_sq]
+      apply sub_mem (by simp)
+      apply pow_mem
+      exact h
+  · intro h
+    have h := re_mem_constructibleClosure h
+    rw [Complex.exp_ofReal_mul_I_re, himage] at h
+    exact h
+
+theorem sin_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
+    Real.sin (k * (2 * π)) ∈ constructibleClosure ℚ ℝ ↔
+    k.den.totient.isPowerOfTwo := by
+  rw [← cos_mem_constructibleClosure_iff_isPowerOfTwo_totient]
+  constructor
+  · intro h
+    apply mem_constructibleClosure_of_sq_mem
+    rw [Real.cos_sq']
+    apply sub_mem (by simp)
+    apply pow_mem
+    exact h
+  · intro h
+    apply mem_constructibleClosure_of_sq_mem
+    rw [Real.sin_sq]
+    apply sub_mem (by simp)
+    apply pow_mem
+    exact h
+
 namespace EuclideanGeometry
 
 variable {V P : Type*}

@@ -1,7 +1,7 @@
 module
 
 public import Compass.Basis
-public import Compass.Equivalence
+public import Compass.Polygon
 
 import Mathlib.Algebra.Polynomial.SpecificDegree
 import Mathlib.Analysis.Complex.Angle
@@ -41,57 +41,6 @@ theorem arccos_half : Real.arccos 2⁻¹ = π / 3 := by
   · grind [Real.pi_nonneg]
   · simp
 
-theorem irreducible_861 :
-    Irreducible (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℚ) := by
-  have hdegeee :
-      (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℚ).natDegree = 3 := by
-    compute_degree!
-  have hdegree' :
-      (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℤ).natDegree = 3 := by
-    compute_degree!
-  apply Polynomial.irreducible_of_degree_le_three_of_not_isRoot
-  · simp [hdegeee]
-  intro x h
-  have haeval : (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1 : Polynomial ℤ).aeval x = 0 := by
-    simpa [map_ofNat, Polynomial.IsRoot.def] using h
-  have hnum : IsFractionRing.num ℤ x ∣ 1 := by simpa using num_dvd_of_is_root haeval
-  have hnum : x.num = 1 ∨ x.num = -1 := by
-    simpa [← isUnit_iff_dvd_one, Int.isUnit_iff] using x.isFractionRingNum.symm.dvd.trans hnum
-  have hden := den_dvd_of_is_root haeval
-  rw [Polynomial.leadingCoeff, hdegree', Polynomial.coeff_sub, Polynomial.coeff_sub,
-    Polynomial.coeff_ofNat_mul, Polynomial.coeff_ofNat_mul, Polynomial.coeff_X,
-    Polynomial.coeff_one] at hden
-  have hden : (IsFractionRing.den ℤ x).val ∣ 8 := by simpa using hden
-  have hden : x.den ∣ 8 := by
-    simpa using x.isFractionRingDen.symm.dvd.trans (Int.natAbs_dvd_natAbs.mpr hden)
-  have hdenle : x.den ≤ 8 := Nat.le_of_dvd (by simp) hden
-  interval_cases hdeneq : x.den
-  · simp at hden
-  · rcases hnum with hnum | hnum
-    · have hx : x = 1 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-    · have hx : x = -1 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-  · rcases hnum with hnum | hnum
-    · have hx : x = 1 / 2 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-    · have hx : x = -1 / 2 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-  · simp at hden
-  · rcases hnum with hnum | hnum
-    · have hx : x = 1 / 4 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-    · have hx : x = -1 / 4 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-  · simp at hden
-  · simp at hden
-  · simp at hden
-  · rcases hnum with hnum | hnum
-    · have hx : x = 1 / 8 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-    · have hx : x = -1 / 8 := by rw [← x.num_div_den, hnum, hdeneq]; simp
-      norm_num [hx, map_ofNat] at haeval
-
 theorem irreducible_cube_2 :
     Irreducible (Polynomial.X ^ 3 - 2 : Polynomial ℚ) := by
   have hdegeee : (Polynomial.X ^ 3 - 2 : Polynomial ℚ).natDegree = 3 := by
@@ -128,19 +77,10 @@ theorem irreducible_cube_2 :
     · have hx : x = -2 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
       norm_num [hx, map_ofNat] at haeval
 
-noncomputable
-def ratEquivBot {K : Type*} [Field K] [CharZero K] : ℚ ≃+* (⊥ : Subfield K) :=
-    (algebraMap ℚ K).rangeRestrictFieldEquiv.trans
-    (RingEquiv.subfieldCongr Subfield.bot_eq_of_charZero.symm)
-
 theorem re_im_image_01 : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
   ext x
   simp
   grind
-
-theorem Subfield.closrue_01 {K : Type*} [Field K] : Subfield.closure ({0, 1} : Set K) = ⊥ := by
-  refine Subfield.closure_eq_of_le ?_ (by simp)
-  apply Set.pair_subset (by simp) (by simp)
 
 theorem not_exist_angle_trisection :
     ∃ p₁ p₂ p₃ : P, p₁ ≠ p₂ ∧ p₂ ≠ p₃ ∧ p₁ ≠ p₃ ∧
@@ -255,7 +195,7 @@ theorem not_exist_angle_trisection :
       · apply smul_vsub_mem_vectorSpan_pair
     · simp [d, mem_sphere, hcb0]
   have habd : ∠ a b c = ∠ a b d := by
-    apply angle_smul_right_of_pos _ (show 0 < (‖c - b‖ / ‖a - b‖) by
+    apply angle_smul_right_of_pos _ (show 0 < ‖c - b‖ / ‖a - b‖ by
       apply div_pos
       · simpa using hcb0
       · simpa using hab0
@@ -268,12 +208,14 @@ theorem not_exist_angle_trisection :
     (by simpa [sub_eq_zero] using hdbne), vsub_eq_sub, vsub_eq_sub] at hangle
   set w := (a - b) / (d - b)
   have hwnorm : ‖w‖ = 1 := by simp [w, d, hcb0, hab0]
-  have hwre : w.re = Real.cos (π / 9) := by
-    rw [← Complex.norm_mul_exp_arg_mul_I w, hwnorm,
-      Complex.ofReal_one, one_mul, Complex.exp_ofReal_mul_I_re]
-    rcases abs_cases w.arg with ⟨hw, _⟩ | ⟨hw, _⟩
-    · rw [← hw, hangle]
-    · rw [← hangle, hw, Real.cos_neg]
+  have hwre : w.re = Real.cos ((1 / 18 : ℚ) * (2 * π)) := by
+    trans Real.cos (π / 9)
+    · rw [← Complex.norm_mul_exp_arg_mul_I w, hwnorm,
+        Complex.ofReal_one, one_mul, Complex.exp_ofReal_mul_I_re]
+      rcases abs_cases w.arg with ⟨hw, _⟩ | ⟨hw, _⟩
+      · rw [← hw, hangle]
+      · rw [← hangle, hw, Real.cos_neg]
+    · congrm Real.cos ($(by ring))
   have hstar : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
   have ha := ConstructiblePoint.mem_constructibleClosure hstar ha
   have hb := ConstructiblePoint.mem_constructibleClosure hstar hb
@@ -283,33 +225,10 @@ theorem not_exist_angle_trisection :
   have hwremem : w.re ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℝ)) ℝ := by
     rw [← re_im_image_01]
     exact re_mem_constructibleClosure hw
-  rw [Subfield.closrue_01] at hwremem
-  have hquad : (minpoly (⊥ : Subfield ℝ) w.re).natDegree.isPowerOfTwo :=
-    isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hwremem
-  let p : Polynomial (⊥ : Subfield ℝ) :=
-    8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1
-  have hp : Irreducible p := by
-    suffices Irreducible (Polynomial.mapEquiv ratEquivBot
-        (8 * Polynomial.X ^ 3 - 6 * Polynomial.X - 1)) by
-      convert this
-      simp [p]
-    exact Irreducible.map _ irreducible_861
-  have hwp : minpoly (⊥ : Subfield ℝ) w.re ∣ p := by
-    apply minpoly.dvd
-    suffices 8 * Real.cos (π / 9) ^ 3 - 6 * Real.cos (π / 9) - 1 = 0 by simpa [p, hwre, map_ofNat]
-    suffices 2 * (4 * Real.cos (π / 9) ^ 3 - 3 * Real.cos (π / 9)) - 1 = 0 by
-      linear_combination this
-    rw [← Real.cos_three_mul, show 3 * (π / 9) = π / 3 by ring]
-    simp
-  have hminpoly : (minpoly (⊥ : Subfield ℝ) w.re).natDegree = 3 := by
-    apply Polynomial.natDegree_eq_of_degree_eq_some
-    rw [Irreducible.dvd_iff hp] at hwp
-    rw [← Polynomial.degree_eq_degree_of_associated <| Or.resolve_left hwp (minpoly.not_isUnit _ _)]
-    unfold p
-    compute_degree!
-  rw [hminpoly] at hquad
-  contrapose! hquad
-  decide
+  rw [hwre, ← constructibleClosure_transfer_ℚ_01] at hwremem
+  rw [cos_mem_constructibleClosure_iff_isPowerOfTwo_totient] at hwremem
+  absurd hwremem
+  simp +decide
 
 theorem dist_homothety_homothety {V : Type*} {P : Type*}
     [SeminormedAddCommGroup V] [PseudoMetricSpace P] [NormedAddTorsor V P]
@@ -352,28 +271,20 @@ theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     rw [← re_im_image_01]
     apply norm_mem_constructibleClosure
     exact sub_mem hc' hd'
-  rw [Subfield.closrue_01] at hcd
-  have hquad : (minpoly (⊥ : Subfield ℝ) (dist c' d')).natDegree.isPowerOfTwo :=
+  rw [← constructibleClosure_transfer_ℚ_01] at hcd
+  have hquad : (minpoly ℚ (dist c' d')).natDegree.isPowerOfTwo :=
     isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hcd
   have hdist : dist c' d' ^ 3 = 2 := by
     simp_rw [c', d', Isometry.dist_eq (e.isometry), dist_homothety_homothety]
     rw [mul_pow, hdist, dist_eq_norm_vsub', norm_inv, norm_norm, inv_pow]
     rw [mul_comm 2, inv_mul_cancel_left₀ (by simpa using h.symm)]
-  let p : Polynomial (⊥ : Subfield ℝ) := Polynomial.X ^ 3 - 2
-  have hp : Irreducible p := by
-    suffices Irreducible (Polynomial.mapEquiv ratEquivBot
-        (Polynomial.X ^ 3 - 2)) by
-      convert this
-      simp [p]
-    exact Irreducible.map _ irreducible_cube_2
-  have hwp : minpoly (⊥ : Subfield ℝ) (dist c' d') ∣ p := by
+  have hwp : minpoly ℚ (dist c' d') ∣ Polynomial.X ^ 3 - 2 := by
     apply minpoly.dvd
-    simp [p, hdist, map_ofNat]
-  have hminpoly : (minpoly (⊥ : Subfield ℝ) (dist c' d')).natDegree = 3 := by
+    simp [hdist, map_ofNat]
+  have hminpoly : (minpoly ℚ (dist c' d')).natDegree = 3 := by
     apply Polynomial.natDegree_eq_of_degree_eq_some
-    rw [Irreducible.dvd_iff hp] at hwp
+    rw [Irreducible.dvd_iff irreducible_cube_2] at hwp
     rw [← Polynomial.degree_eq_degree_of_associated <| Or.resolve_left hwp (minpoly.not_isUnit _ _)]
-    unfold p
     compute_degree!
   rw [hminpoly] at hquad
   contrapose! hquad
