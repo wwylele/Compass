@@ -83,8 +83,8 @@ theorem re_im_image_01 : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} 
   grind
 
 theorem not_exist_angle_trisection :
-    ∃ p₁ p₂ p₃ : P, p₁ ≠ p₂ ∧ p₂ ≠ p₃ ∧ p₁ ≠ p₃ ∧
-    ¬ ∃ q₁ q₂ q₃ : P,
+    ¬ ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
+    ∃ q₁ q₂ q₃ : P,
     ConstructiblePoint {p₁, p₂, p₃} q₁ ∧
     ConstructiblePoint {p₁, p₂, p₃} q₂ ∧
     ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
