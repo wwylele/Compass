@@ -488,11 +488,13 @@ theorem mem_constructibleClosure_iff_isPowerOfTwo_finrank_adjoin
     rw [mem_constructibleClosure]
     exact ⟨_, h, IntermediateField.mem_adjoin_of_mem _ (by simp)⟩
 
+theorem algebraMap_mem_constructibleClosure (x : K) :
+    algebraMap K L x ∈ constructibleClosure K L :=
+  Set.mem_of_mem_of_subset (by simp) <| SetLike.coe_subset_coe.mpr bot_le
+
 theorem mem_constructibleClosure_of_mem_subfield {x : L} {K : Subfield L} (h : x ∈ K) :
-    x ∈ constructibleClosure K L := by
-  refine Set.mem_of_mem_of_subset ?_ <| SetLike.coe_subset_coe.mpr bot_le
-  rw [SetLike.mem_coe, IntermediateField.mem_bot, Set.mem_range]
-  exact ⟨⟨x, h⟩, (by simp [Subfield.algebraMap_ofSubfield])⟩
+    x ∈ constructibleClosure K L :=
+  algebraMap_mem_constructibleClosure (⟨x, h⟩ : K)
 
 theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructibleClosure K L) :
     x ∈ constructibleClosure K L := by
@@ -844,3 +846,15 @@ theorem constructibleClosure_transfer_ℚ_01 [CharZero L] {x : L} :
   apply Set.pair_subset
   · simp
   · simp
+
+theorem re_im_image_01 : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
+  ext x
+  simp
+  grind
+
+theorem mem_constructibleClosure_complex_ℚ_iff {x : ℂ} :
+    x ∈ constructibleClosure ℚ ℂ ↔
+    x.re ∈ constructibleClosure ℚ ℝ ∧ x.im ∈ constructibleClosure ℚ ℝ := by
+  simp_rw [constructibleClosure_transfer_ℚ_01]
+  rw [mem_constructibleClosure_complex_iff (by simp)]
+  rw [re_im_image_01]

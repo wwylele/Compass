@@ -19,7 +19,8 @@ can start drawing lines and circles with. Our definition of constructibility doe
 permit arbitrarily choosing a free point on the plane, on a line, or on a circle. Only
 initial points and intersections are considered constructible points. Excluding arbitrary
 points does not weaken the constructibility in meaningful way: if the initial point set
-has more than one point, the set of all constructible points is dense, so if one wants
+has more than one point, the set of all constructible points is dense
+(`EuclideanGeometry.dense_constructiblePoint`), so if one wants
 to find an arbitrary point in an open set, they can construct a lot of constructible
 points until one lands in the set.
 
@@ -63,6 +64,45 @@ inductive ConstructibleCircle [Fact (Module.finrank ℝ V = 2)] (initial : Set P
 | centerRadius (o : Sphere P) (r : P) (hcenter : ConstructiblePoint initial o.center)
     (hradius : ConstructiblePoint initial r) (h : r ∈ o) :
     ConstructibleCircle initial o
+
+end
+
+mutual
+
+theorem ConstructiblePoint.mem_of_subsingleton {initial : Set P} (h : initial.Subsingleton)
+    {p : P} (hp : ConstructiblePoint initial p) :
+    p ∈ initial :=
+  match hp with
+  | ConstructiblePoint.given p h => h
+  | ConstructiblePoint.twoLines l₁ l₂ hl₁ hl₂ hl p hpl₁ hpl₂ =>
+    (not_constructibleLine_of_subsingleton h l₁ hl₁).elim
+  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo =>
+    (not_constructibleLine_of_subsingleton h l hl).elim
+  | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ ho p hpo₁ hpo₂ => by
+    absurd ho
+    ext
+    · exact h (ho₁.center_mem_of_subsingleton h) (ho₂.center_mem_of_subsingleton h)
+    · rw [ho₁.radius_equal_zero_of_subsingleton h, ho₂.radius_equal_zero_of_subsingleton h]
+
+theorem not_constructibleLine_of_subsingleton {initial : Set P} (h : initial.Subsingleton)
+    (l : AffineSubspace ℝ P) : ¬ ConstructibleLine initial l
+  | ConstructibleLine.twoPoints _ _ hp₁ hp₂ hp l _ _ hrank =>
+    hp (h (hp₁.mem_of_subsingleton h) (hp₂.mem_of_subsingleton h))
+
+theorem ConstructibleCircle.center_mem_of_subsingleton {initial : Set P} (h : initial.Subsingleton)
+    (o : Sphere P) (ho : ConstructibleCircle initial o) :
+    o.center ∈ initial :=
+  match ho with
+  | ConstructibleCircle.centerRadius o _ hcenter _ ho =>
+    hcenter.mem_of_subsingleton h
+
+theorem ConstructibleCircle.radius_equal_zero_of_subsingleton {initial : Set P}
+    (h : initial.Subsingleton) (o : Sphere P) (ho : ConstructibleCircle initial o) :
+    o.radius = 0 :=
+  match ho with
+  | ConstructibleCircle.centerRadius o r hcenter hradius ho => by
+    rw [mem_sphere] at ho
+    rw [← ho, h (hcenter.mem_of_subsingleton h) (hradius.mem_of_subsingleton h), dist_self]
 
 end
 
@@ -287,8 +327,7 @@ theorem ConstructibleCircle.map_homothety (c : P) {r : ℝ} (hr : r ≠ 0) {init
   match h with
   | ConstructibleCircle.centerRadius o radius hcenter hradius h => by
     apply ConstructibleCircle.centerRadius (Sphere.mk (homothety c r o.center) (|r| * o.radius))
-      (homothety c r radius)
-      (hcenter.map_homothety c hr) (hradius.map_homothety c hr)
+      (homothety c r radius) (hcenter.map_homothety c hr) (hradius.map_homothety c hr)
     exact homothety_mem_sphere c r h
 
 end

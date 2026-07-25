@@ -2,6 +2,7 @@ module
 
 public import Compass.ConstructibleNumber
 public import Compass.CommonConstruction
+public import Compass.Basis
 
 import Mathlib.LinearAlgebra.Complex.FiniteDimensional
 
@@ -32,7 +33,7 @@ variable {V P : Type*}
   [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
   [MetricSpace P] [NormedAddTorsor V P]
 
-instance : Fact (Module.finrank ℝ ℂ = 2) := ⟨Complex.finrank_real_complex⟩
+instance : Fact (Module.finrank ℝ ℂ = 2) := Complex.finrank_real_complex_fact
 
 theorem system_two_x {x y a b c d e f : ℝ}
     (h1 : x ^ 2 + a * x + y ^ 2 + b * y = c)
@@ -713,5 +714,44 @@ theorem constructiblePoint_iff_mem_constructibleClosure {initial : Set ℂ}
     ConstructiblePoint initial p ↔ p ∈ constructibleClosure (Subfield.closure initial) ℂ where
   mp h := h.mem_constructibleClosure hinit
   mpr h := constructiblePoint_of_mem_constructibleClosure h0 h1 h
+
+theorem dense_constructiblePoint {initial : Set P} (h : initial.Nontrivial) :
+    Dense {p | ConstructiblePoint initial p} := by
+  have : FiniteDimensional ℝ V := FiniteDimensional.of_fact_finrank_eq_two
+  obtain ⟨a, b, hab, h⟩ := h.pair_subset
+  rw [Set.pair_subset_iff] at h
+  rw [← (equivComplexScaled a b hab).toContinuousAffineEquiv
+    |>.toHomeomorph.isDenseEmbedding.dense_image]
+  change Dense ((equivComplexScaled a b hab).toEquiv '' {p | ConstructiblePoint initial p})
+  rw [← Equiv.setOfPred_apply_symm_eq_image_setOfPred]
+  simp_rw [← constructiblePoint_iff_equivComplexScaled hab, AffineEquiv.coe_symm_toEquiv,
+    AffineEquiv.apply_symm_apply]
+  suffices Dense {p | ConstructiblePoint ({0, 1} : Set ℂ) p} by
+    apply this.mono (fun p hp ↦ ?_)
+    rw [Set.mem_ofPred_eq] at ⊢ hp
+    apply hp.mono fun p hp ↦ ?_
+    rw [Set.mem_image]
+    simp only [Set.mem_insert_iff, Set.mem_singleton_iff] at hp
+    rcases hp with hp | hp
+    · use a
+      simpa [hp] using h.1
+    · use b
+      simpa [hp] using h.2
+  have hinit : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
+  have h0 : ConstructiblePoint ({0, 1} : Set ℂ) 0 := ConstructiblePoint.given 0 (by simp)
+  have h1 : ConstructiblePoint ({0, 1} : Set ℂ) 1 := ConstructiblePoint.given 1 (by simp)
+  simp_rw [constructiblePoint_iff_mem_constructibleClosure hinit h0 h1]
+  simp_rw [← constructibleClosure_transfer_ℚ_01, mem_constructibleClosure_complex_ℚ_iff]
+  suffices Dense {p : ℂ | p.re ∈ Set.range (algebraMap ℚ ℝ) ∧ p.im ∈ Set.range (algebraMap ℚ ℝ)} by
+    refine this.mono fun p hp ↦ ?_
+    simp only [Set.mem_range, Set.mem_ofPred_eq] at ⊢ hp
+    obtain ⟨⟨x, hx⟩, ⟨y, hy⟩⟩ := hp
+    simp [← hx, ← hy]
+  rw [← Complex.equivRealProdCLM.toHomeomorph.isDenseEmbedding.dense_image]
+  have hq : Dense (Set.range (algebraMap ℚ ℝ)) := Rat.denseRange_cast
+  convert hq.prod hq
+  ext p
+  simp_rw [ContinuousLinearEquiv.coe_toHomeomorph, Complex.equivRealProdCLM_apply]
+  grind [Complex.exists]
 
 end EuclideanGeometry

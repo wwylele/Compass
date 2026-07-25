@@ -77,11 +77,6 @@ theorem irreducible_cube_2 :
     · have hx : x = -2 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
       norm_num [hx, map_ofNat] at haeval
 
-theorem re_im_image_01 : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
-  ext x
-  simp
-  grind
-
 theorem not_exist_angle_trisection :
     ¬ ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
     ∃ q₁ q₂ q₃ : P,
@@ -244,38 +239,24 @@ theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
   classical
   push Not
   have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
-  have hab : ‖b -ᵥ a‖ ≠ 0 := by simpa using h.symm
-  have hab' : ‖b -ᵥ a‖⁻¹ ≠ 0 := by simpa using h.symm
   intro c d hc hd hdist
-  have hc := hc.map_homothety a hab'
-  have hd := hd.map_homothety a hab'
-  have hinit : (AffineMap.homothety a ‖b -ᵥ a‖⁻¹) '' {a, b} =
-      {a, ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a} := by
-    rw [Set.image_pair]
-    simp [AffineMap.homothety_apply]
-  rw [hinit] at hc hd
-  let e : P ≃ᵃⁱ[ℝ] ℂ := equivComplex a (‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a) (by
-    simp [dist_eq_norm_vsub', norm_smul, hab]
-  )
-  rw [ConstructiblePoint.map_iff e] at hc hd
-  have hinit' : e '' {a, ‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a} = {0, 1} := by
-    rw [Set.image_pair, equivComplex_left, equivComplex_right]
-  rw [hinit'] at hc hd
-  set c' := e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)
-  set d' := e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ d)
+  rw [← constructiblePoint_iff_equivComplexScaled h, Set.image_pair,
+    equivComplexScaled_left, equivComplexScaled_right] at hc hd
+  set c' := equivComplexScaled a b h c
+  set d' := equivComplexScaled a b h d
   have hstar : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
   have hc' := hc.mem_constructibleClosure hstar
   have hd' := hd.mem_constructibleClosure hstar
   have hcd : dist c' d' ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℝ)) ℝ := by
-    rw [dist_eq_norm_sub]
-    rw [← re_im_image_01]
+    rw [dist_eq_norm_sub, ← re_im_image_01]
     apply norm_mem_constructibleClosure
     exact sub_mem hc' hd'
   rw [← constructibleClosure_transfer_ℚ_01] at hcd
   have hquad : (minpoly ℚ (dist c' d')).natDegree.isPowerOfTwo :=
     isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hcd
   have hdist : dist c' d' ^ 3 = 2 := by
-    simp_rw [c', d', Isometry.dist_eq (e.isometry), dist_homothety_homothety]
+    simp_rw [c', d', equivComplexScaled_apply]
+    simp_rw [Isometry.dist_eq (AffineIsometryEquiv.isometry _), dist_homothety_homothety]
     rw [mul_pow, hdist, dist_eq_norm_vsub', norm_inv, norm_norm, inv_pow]
     rw [mul_comm 2, inv_mul_cancel_left₀ (by simpa using h.symm)]
   have hwp : minpoly ℚ (dist c' d') ∣ Polynomial.X ^ 3 - 2 := by

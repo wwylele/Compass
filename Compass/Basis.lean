@@ -1,8 +1,12 @@
 module
 
+public import Compass.ConstructiblePoint
 public import Mathlib.Analysis.InnerProductSpace.PiL2
+public import Mathlib.LinearAlgebra.Complex.FiniteDimensional
 
 public section
+
+open EuclideanGeometry
 
 theorem AffineIsometryEquiv.trans_apply {𝕜 : Type*} {V : Type*} {V₂ : Type*} {V₃ : Type*}
     {P : Type*} {P₂ : Type*} {P₃ : Type*}
@@ -32,9 +36,11 @@ noncomputable def equivComplex (a b : P) (hab : dist a b = 1) : P ≃ᵃⁱ[ℝ]
   (AffineIsometryEquiv.vaddConst ℝ a).symm.trans
   ((basis2D hv).equiv Complex.orthonormalBasisOneI (Equiv.refl _)).toAffineIsometryEquiv
 
+@[simp]
 theorem equivComplex_left {a b : P} (hab : dist a b = 1) : equivComplex a b hab a = 0 := by
   simp [equivComplex]
 
+@[simp]
 theorem equivComplex_right {a b : P} (hab : dist a b = 1) : equivComplex a b hab b = 1 := by
   have hv : ‖b -ᵥ a‖ = 1 := by simpa [dist_eq_norm_vsub'] using hab
   simp_rw [equivComplex, AffineIsometryEquiv.trans_apply, AffineIsometryEquiv.coe_vaddConst_symm,
@@ -44,3 +50,52 @@ theorem equivComplex_right {a b : P} (hab : dist a b = 1) : equivComplex a b hab
     rw [← basis2D_self hv]
   rw [OrthonormalBasis.equiv_apply_basis]
   simp
+
+noncomputable def equivComplexScaled (a b : P) (hab : a ≠ b) : P ≃ᵃ[ℝ] ℂ :=
+    (AffineEquiv.homothetyUnitsMulHom a (Units.mk0 (dist a b)⁻¹ (by simpa using hab))).trans
+    (equivComplex a ((dist a b)⁻¹ • (b -ᵥ a) +ᵥ a) ?_).toAffineEquiv
+  where finally
+    have : ‖b -ᵥ a‖ ≠ 0 := by simpa using hab.symm
+    simp [dist_eq_norm_vsub', norm_smul, this]
+
+@[simp]
+theorem equivComplexScaled_left {a b : P} (hab : a ≠ b) :
+    equivComplexScaled a b hab a = 0 := by
+  simp [equivComplexScaled]
+
+@[simp]
+theorem equivComplexScaled_right {a b : P} (hab : a ≠ b) :
+    equivComplexScaled a b hab b = 1 := by
+  simp only [equivComplexScaled, AffineEquiv.trans_apply,
+    AffineEquiv.coe_homothetyUnitsMulHom_apply, Units.val_mk0,
+    AffineIsometryEquiv.coe_toAffineEquiv]
+  rw [AffineMap.homothety_apply]
+  apply equivComplex_right
+
+theorem equivComplexScaled_apply {a b c : P} (hab : a ≠ b) :
+    equivComplexScaled a b hab c = equivComplex a ((dist a b)⁻¹ • (b -ᵥ a) +ᵥ a)
+    (by
+      have : ‖b -ᵥ a‖ ≠ 0 := by simpa using hab.symm
+      simp [dist_eq_norm_vsub', norm_smul, this])
+    (AffineMap.homothety a (dist a b)⁻¹ c) := by
+  simp [equivComplexScaled]
+
+theorem angle_equivComplexScaled {a b : P} (hab : a ≠ b) (p q r : P) :
+    ∠ (equivComplexScaled a b hab p) (equivComplexScaled a b hab q) (equivComplexScaled a b hab r) =
+    ∠ p q r := by
+  simp only [equivComplexScaled, AffineEquiv.trans_apply,
+    AffineEquiv.coe_homothetyUnitsMulHom_apply, Units.val_mk0,
+    AffineIsometryEquiv.coe_toAffineEquiv]
+  simp_rw [← AffineIsometryEquiv.coe_toAffineIsometry]
+  rw [AffineIsometry.angle_map, EuclideanGeometry.angle_homothety _ _ _ _ (by simpa using hab)]
+
+instance : Fact (Module.finrank ℝ ℂ = 2) := Complex.finrank_real_complex_fact
+
+theorem constructiblePoint_iff_equivComplexScaled {a b : P} (hab : a ≠ b)
+    {initial : Set P} {p : P} :
+    ConstructiblePoint (equivComplexScaled a b hab '' initial) (equivComplexScaled a b hab p) ↔
+    ConstructiblePoint initial p := by
+  unfold equivComplexScaled
+  rw [AffineEquiv.coe_trans, Set.image_comp, Function.comp_apply]
+  rw [AffineIsometryEquiv.coe_toAffineEquiv, AffineEquiv.coe_homothetyUnitsMulHom_apply]
+  rw [← ConstructiblePoint.map_iff, constructiblePoint_iff_homothety _ (Units.ne_zero _)]

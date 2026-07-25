@@ -218,15 +218,13 @@ theorem cos_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
   rw [constructibleClosure_transfer_ℚ_01]
   rw [constructibleClosure_transfer_ℚ_01]
   rw [show k * (2 * π * Complex.I) = (k * (2 * π) : ℝ) * Complex.I by push_cast; ring]
-  have himage : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
-    simp [Set.image_pair]
   constructor
   · intro h
     rw [mem_constructibleClosure_complex_iff (by simp)]
     constructor
-    · rw [Complex.exp_ofReal_mul_I_re, himage]
+    · rw [Complex.exp_ofReal_mul_I_re, re_im_image_01]
       exact h
-    · rw [Complex.exp_ofReal_mul_I_im, himage]
+    · rw [Complex.exp_ofReal_mul_I_im, re_im_image_01]
       apply mem_constructibleClosure_of_sq_mem
       rw [Real.sin_sq]
       apply sub_mem (by simp)
@@ -234,7 +232,7 @@ theorem cos_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
       exact h
   · intro h
     have h := re_mem_constructibleClosure h
-    rw [Complex.exp_ofReal_mul_I_re, himage] at h
+    rw [Complex.exp_ofReal_mul_I_re, re_im_image_01] at h
     exact h
 
 theorem sin_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
@@ -268,26 +266,15 @@ theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b :
     ← constructiblePoint_iff_mem_constructibleClosure (by grind)
     (ConstructiblePoint.given 0 (by simp)) (ConstructiblePoint.given 1 (by simp))]
   have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
-  have hab : ‖b -ᵥ a‖ ≠ 0 := by simpa using h.symm
-  have hab' : ‖b -ᵥ a‖⁻¹ ≠ 0 := by simpa using h.symm
-  let e : P ≃ᵃⁱ[ℝ] ℂ := equivComplex a (‖b -ᵥ a‖⁻¹ • (b -ᵥ a) +ᵥ a) (by
-    simp [dist_eq_norm_vsub', norm_smul, hab]
-  )
-  have ha : e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) a) = 0 := by
-    rw [AffineMap.homothety_apply_same]
-    rw [equivComplex_left]
-  have hb : e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) b) = 1 := by
-    rw [AffineMap.homothety_apply]
-    rw [equivComplex_right]
-  have hangle (c : P) : ∠ b a c = ∠ 1 0 (e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)) := by
+  have ha : equivComplexScaled a b h a = 0 := by simp
+  have hb : equivComplexScaled a b h b = 1 := by simp
+  have hangle (c : P) : ∠ b a c = ∠ 1 0 (equivComplexScaled a b h c) := by
     rw [← ha, ← hb]
-    simp_rw [← AffineIsometryEquiv.coe_toAffineIsometry]
-    rw [AffineIsometry.angle_map, EuclideanGeometry.angle_homothety _ _ _ _ hab']
+    rw [angle_equivComplexScaled]
   conv_lhs =>
     right; ext c
-    rw [← constructiblePoint_iff_homothety a hab']
-    rw [ConstructiblePoint.map_iff e]
-    rw [Set.image_pair, Set.image_pair, ha, hb]
+    rw [← constructiblePoint_iff_equivComplexScaled h]
+    rw [Set.image_pair, ha, hb]
     rw [hangle]
   have hexp : (k * (2 * π * Complex.I)) = (2 * π * k : ℝ) * Complex.I := by
     push_cast; ring
@@ -314,16 +301,14 @@ theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b :
     positivity
   constructor
   · rintro ⟨c, hac, hc, hangle⟩
-    have hc0 : e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) c) ≠ 0 := by
-      rw [← ha]
-      rw [e.injective.ne_iff, (AffineMap.homothety_injective _ hab').ne_iff]
+    have hc0 : equivComplexScaled a b h c ≠ 0 := by
+      rw [← ha, (equivComplexScaled a b h).injective.ne_iff]
       exact hac.symm
-    apply ConstructiblePoint.lineCircle line[ℝ, 0, Complex.exp (k * (2 * π * Complex.I))]
-      ⟨0, 1⟩
+    apply ConstructiblePoint.lineCircle line[ℝ, 0, Complex.exp (k * (2 * π * Complex.I))] ⟨0, 1⟩
     · apply ConstructibleLine.twoPoints 0
-        (‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖ • Complex.exp (k * (2 * π * Complex.I))) h0
-      · apply ConstructiblePoint.twoCircles ⟨0, ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖⟩
-          ⟨1, dist 1 (e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c))⟩
+        (‖equivComplexScaled a b h c‖ • Complex.exp (k * (2 * π * Complex.I))) h0
+      · apply ConstructiblePoint.twoCircles ⟨0, ‖equivComplexScaled a b h c‖⟩
+          ⟨1, dist 1 (equivComplexScaled a b h c)⟩
         · apply ConstructibleCircle.centerRadius _ _ h0 hc
           simp [mem_sphere]
         · apply ConstructibleCircle.centerRadius _ _ h1 hc
@@ -343,12 +328,12 @@ theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b :
           · rw [hangle]
             rw [EuclideanGeometry.angle_smul_right_of_pos
               (p₄ := Complex.exp (k * (2 * π * Complex.I)))
-              (r := ‖e ((AffineMap.homothety a ‖b -ᵥ a‖⁻¹) c)‖) _ (by simpa using hc0) (by simp)]
+              (r := ‖equivComplexScaled a b h c‖) _ (by simpa using hc0) (by simp)]
             rw [hcangle]
       · simpa using hc0
       · apply left_mem_affineSpan_pair
       · rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
-        use ‖e (AffineMap.homothety a ‖b -ᵥ a‖⁻¹ c)‖
+        use ‖equivComplexScaled a b h c‖
         simp [AffineMap.lineMap_apply_module]
       · rw [direction_affineSpan, vectorSpan_pair_rev]
         apply finrank_span_singleton
@@ -356,21 +341,13 @@ theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b :
     · exact ConstructibleCircle.centerRadius _ 1 h0 h1 (by simp [mem_sphere])
     · apply right_mem_affineSpan_pair
     · rw [mem_sphere, dist_eq_norm_sub, sub_zero, hexp, Complex.norm_exp_ofReal_mul_I]
-  · intro h
-    refine ⟨(AffineMap.homothety a ‖b -ᵥ a‖) <| e.symm <|
-      Complex.exp (k * (2 * π * Complex.I)), ?_, ?_, ?_⟩
-    · rw [← (AffineMap.homothety_injective a hab').ne_iff]
-      rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab,
-        AffineMap.homothety_one, AffineMap.id_apply]
-      rw [← e.injective.ne_iff, AffineIsometryEquiv.apply_symm_apply]
-      rw [ha]
+  · intro hc
+    refine ⟨(equivComplexScaled a b h).symm <| Complex.exp (k * (2 * π * Complex.I)), ?_, ?_, ?_⟩
+    · rw [← (equivComplexScaled a b h).injective.ne_iff, AffineEquiv.apply_symm_apply, ha]
       symm
       simp
-    · rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab, AffineMap.homothety_one,
-        AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply]
-      exact h
-    · rw [← AffineMap.homothety_mul_apply, inv_mul_cancel₀ hab, AffineMap.homothety_one,
-        AffineMap.id_apply, AffineIsometryEquiv.apply_symm_apply, hcangle]
+    · simpa using hc
+    · simpa using hcangle
 
 /--
 **Gauss–Wantzel theorem**: A regular $n$-gon can be constructed with straightedge and compass
