@@ -37,21 +37,34 @@ variable {V P : Type*}
 
 mutual
 
+/-- The predicate of a point being constructible from a given set of points. -/
 inductive ConstructiblePoint [Fact (Module.finrank ℝ V = 2)] (initial : Set P) : P → Prop
+/-- Any point that's already given is constructible. -/
 | given (p : P) (h : p ∈ initial) : ConstructiblePoint initial p
+/-- The intersection of two different lines is constructible. We don't require explicitly
+require that the lines are not parallel, as it is already implied by the existence of the
+intersection. -/
 | twoLines (l₁ l₂ : AffineSubspace ℝ P)
     (hl₁ : ConstructibleLine initial l₁) (hl₂ : ConstructibleLine initial l₂)
     (h : l₁ ≠ l₂) (p : P) (hpl₁ : p ∈ l₁) (hpl₂ : p ∈ l₂) :
     ConstructiblePoint initial p
+/-- The intersections of a line and a circle, if exist, are constructible. We don't
+explicitly require the circle to be non-degenerate: circle with negative radius is ruled
+out by the existence of the intersection; circle with zero radius is allowed but it doesn't
+impact the formulation in a significant way. -/
 | lineCircle (l : AffineSubspace ℝ P) (o : Sphere P)
     (hl : ConstructibleLine initial l) (ho : ConstructibleCircle initial o)
     (p : P) (hpl : p ∈ l) (hpo : p ∈ o) :
     ConstructiblePoint initial p
+/-- The intersections of two different circls, if exist, are constructible. Similar to `lineCircle`,
+we don't explicitly require the circles to be non-degenerate. -/
 | twoCircles (o₁ o₂ : Sphere P)
     (ho₁ : ConstructibleCircle initial o₁) (ho₂ : ConstructibleCircle initial o₂)
     (h : o₁ ≠ o₂) (p : P) (hpo₁ : p ∈ o₁) (hpo₂ : p ∈ o₂) :
     ConstructiblePoint initial p
 
+/-- The preicate of a line being constructible from a given set of points. Only lines that
+pass through two different points are constructible. -/
 inductive ConstructibleLine [Fact (Module.finrank ℝ V = 2)] (initial : Set P) :
     AffineSubspace ℝ P → Prop
 | twoPoints (p₁ p₂ : P) (hp₁ : ConstructiblePoint initial p₁) (hp₂ : ConstructiblePoint initial p₂)
@@ -59,6 +72,15 @@ inductive ConstructibleLine [Fact (Module.finrank ℝ V = 2)] (initial : Set P) 
     (hrank : Module.finrank ℝ l.direction = 1) :
     ConstructibleLine initial l
 
+/-- The preicate of a circle being constructible from a given set of points. Only circles
+whose center is constructible and contains another constructible point are constructible.
+This definition is equivalent to the definition where the radius of circle is allowed to be
+the length of any constructible segment (see
+`EuclideanGeometry.ConstructibleCircle.centerRadius'`).
+
+This definition allows circle with zero radius. It doesn't impact the set of constructible
+objects in a significant way.
+-/
 inductive ConstructibleCircle [Fact (Module.finrank ℝ V = 2)] (initial : Set P) :
     Sphere P → Prop
 | centerRadius (o : Sphere P) (r : P) (hcenter : ConstructiblePoint initial o.center)
@@ -69,6 +91,8 @@ end
 
 mutual
 
+/-- If the given point set is sub-singleton, No points are constructible other than the
+given one. -/
 theorem ConstructiblePoint.mem_of_subsingleton {initial : Set P} (h : initial.Subsingleton)
     {p : P} (hp : ConstructiblePoint initial p) :
     p ∈ initial :=
@@ -84,11 +108,14 @@ theorem ConstructiblePoint.mem_of_subsingleton {initial : Set P} (h : initial.Su
     · exact h (ho₁.center_mem_of_subsingleton h) (ho₂.center_mem_of_subsingleton h)
     · rw [ho₁.radius_equal_zero_of_subsingleton h, ho₂.radius_equal_zero_of_subsingleton h]
 
+/-- If the given point set is sub-singleton, No lines are constructible. -/
 theorem not_constructibleLine_of_subsingleton {initial : Set P} (h : initial.Subsingleton)
     (l : AffineSubspace ℝ P) : ¬ ConstructibleLine initial l
   | ConstructibleLine.twoPoints _ _ hp₁ hp₂ hp l _ _ hrank =>
     hp (h (hp₁.mem_of_subsingleton h) (hp₂.mem_of_subsingleton h))
 
+/-- If the given point set is sub-singleton, The only constructible circle is the zero-radius one
+with the center at the given point. -/
 theorem ConstructibleCircle.center_mem_of_subsingleton {initial : Set P} (h : initial.Subsingleton)
     (o : Sphere P) (ho : ConstructibleCircle initial o) :
     o.center ∈ initial :=
@@ -96,6 +123,8 @@ theorem ConstructibleCircle.center_mem_of_subsingleton {initial : Set P} (h : in
   | ConstructibleCircle.centerRadius o _ hcenter _ ho =>
     hcenter.mem_of_subsingleton h
 
+/-- If the given point set is sub-singleton, The only constructible circle is the zero-radius one
+with the center at the given point. -/
 theorem ConstructibleCircle.radius_equal_zero_of_subsingleton {initial : Set P}
     (h : initial.Subsingleton) (o : Sphere P) (ho : ConstructibleCircle initial o) :
     o.radius = 0 :=
@@ -216,6 +245,8 @@ theorem ConstructibleCircle.mono {i1 i2 : Set P} (hi : i1 ⊆ i2) {o : Sphere P}
 end
 
 mutual
+/-- Adding an already constructible point to the initial point set doesn't affect constructibility
+of other points. -/
 theorem ConstructiblePoint.of_insert {initial : Set P} {q p : P} (hq : ConstructiblePoint initial q)
     (h : ConstructiblePoint (initial.insert q) p) :
     ConstructiblePoint initial p :=
@@ -231,6 +262,8 @@ theorem ConstructiblePoint.of_insert {initial : Set P} {q p : P} (hq : Construct
   | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ =>
     ConstructiblePoint.twoCircles o₁ o₂ (ho₁.of_insert hq) (ho₂.of_insert hq) h p hpo₁ hpo₂
 
+/-- Adding an already constructible point to the initial point set doesn't affect constructibility
+of other lines. -/
 theorem ConstructibleLine.of_insert {initial : Set P} {q : P} (hq : ConstructiblePoint initial q)
     {l : AffineSubspace ℝ P} (h : ConstructibleLine (initial.insert q) l) :
     ConstructibleLine initial l :=
@@ -240,6 +273,8 @@ theorem ConstructibleLine.of_insert {initial : Set P} {q : P} (hq : Constructibl
       (ConstructiblePoint.of_insert hq hp₁) (ConstructiblePoint.of_insert hq hp₂)
       h l hp₁l hp₂l hrank
 
+/-- Adding an already constructible point to the initial point set doesn't affect constructibility
+of other circles. -/
 theorem ConstructibleCircle.of_insert {initial : Set P} {q : P} (hq : ConstructiblePoint initial q)
     {o : Sphere P} (h : ConstructibleCircle (initial.insert q) o) :
     ConstructibleCircle initial o :=
@@ -249,6 +284,8 @@ theorem ConstructibleCircle.of_insert {initial : Set P} {q : P} (hq : Constructi
       (ConstructiblePoint.of_insert hq hcenter) (ConstructiblePoint.of_insert hq hradius) h
 end
 
+/-- Adding an already constructible point to the initial point set doesn't affect constructibility
+of other points. -/
 theorem constructiblePoint_insert {initial : Set P} {p : P} (h : ConstructiblePoint initial p) :
     ConstructiblePoint (initial.insert p) = ConstructiblePoint initial := by
   ext q

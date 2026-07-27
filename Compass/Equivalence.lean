@@ -33,7 +33,7 @@ variable {V P : Type*}
   [NormedAddCommGroup V] [InnerProductSpace ℝ V] [hrank : Fact (Module.finrank ℝ V = 2)]
   [MetricSpace P] [NormedAddTorsor V P]
 
-instance : Fact (Module.finrank ℝ ℂ = 2) := Complex.finrank_real_complex_fact
+attribute [instance] Complex.finrank_real_complex_fact
 
 theorem system_two_x {x y a b c d e f : ℝ}
     (h1 : x ^ 2 + a * x + y ^ 2 + b * y = c)
@@ -715,9 +715,9 @@ theorem constructiblePoint_iff_mem_constructibleClosure {initial : Set ℂ}
   mp h := h.mem_constructibleClosure hinit
   mpr h := constructiblePoint_of_mem_constructibleClosure h0 h1 h
 
+/-- The set of constructible points is dense as long as at least two points are given. -/
 theorem dense_constructiblePoint {initial : Set P} (h : initial.Nontrivial) :
     Dense {p | ConstructiblePoint initial p} := by
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_fact_finrank_eq_two
   obtain ⟨a, b, hab, h⟩ := h.pair_subset
   rw [Set.pair_subset_iff] at h
   rw [← (equivComplexScaled a b hab).toContinuousAffineEquiv

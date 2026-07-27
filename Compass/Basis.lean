@@ -6,6 +6,9 @@ public import Mathlib.LinearAlgebra.Complex.FiniteDimensional
 
 public section
 
+attribute [instance] FiniteDimensional.of_fact_finrank_eq_two
+attribute [instance] Complex.finrank_real_complex_fact
+
 open EuclideanGeometry
 
 theorem AffineIsometryEquiv.trans_apply {𝕜 : Type*} {V : Type*} {V₂ : Type*} {V₃ : Type*}
@@ -22,12 +25,10 @@ variable {V P : Type*}
   [MetricSpace P] [NormedAddTorsor V P]
 
 noncomputable def basis2D {v : V} (h : ‖v‖ = 1) :=
-  haveI : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   (Orthonormal.exists_orthonormalBasis_extension_of_card_eq (v := ![v, 0]) (𝕜 := ℝ) (s := {0})
     (by simp [hrank.out]) (by simpa using h)).choose
 
 theorem basis2D_self {v : V} (h : ‖v‖ = 1) : basis2D h 0 = v :=
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   (Orthonormal.exists_orthonormalBasis_extension_of_card_eq (v := ![v, 0]) (𝕜 := ℝ) (s := {0})
     (by simp [hrank.out]) (by simpa using h)).choose_spec 0 (by simp)
 
@@ -88,8 +89,6 @@ theorem angle_equivComplexScaled {a b : P} (hab : a ≠ b) (p q r : P) :
     AffineIsometryEquiv.coe_toAffineEquiv]
   simp_rw [← AffineIsometryEquiv.coe_toAffineIsometry]
   rw [AffineIsometry.angle_map, EuclideanGeometry.angle_homothety _ _ _ _ (by simpa using hab)]
-
-instance : Fact (Module.finrank ℝ ℂ = 2) := Complex.finrank_real_complex_fact
 
 theorem constructiblePoint_iff_equivComplexScaled {a b : P} (hab : a ≠ b)
     {initial : Set P} {p : P} :

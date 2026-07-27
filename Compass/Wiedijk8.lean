@@ -77,6 +77,16 @@ theorem irreducible_cube_2 :
     · have hx : x = -2 := by rw [← x.num_div_den, hden, h, hnumabs]; simp
       norm_num [hx, map_ofNat] at haeval
 
+/--
+**The impossibility of trisecting the angle**
+
+Trisecting an angle means that given any angle formed by three points, constructing another three
+points (not necessarily distinct from the given ones) that form an angle that's $1/3$ of the given
+one. The statement of the theorem is the negation of this. After pushing the negation into the
+statement, we can equivalently say that there exists an angle formed by three points such that
+for all angles we can construct, they are never $1/3$ of the given one. We then prove this by
+showing $π / 3$ is such an angle, and one cannot construct an angle of $π / 9$ from it.
+-/
 theorem not_exist_angle_trisection :
     ¬ ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
     ∃ q₁ q₂ q₃ : P,
@@ -85,7 +95,6 @@ theorem not_exist_angle_trisection :
     ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
     3 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ := by
   push Not
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   let o := Nonempty.some (show Nonempty P from inferInstance)
   let basis : OrthonormalBasis (Fin 2) ℝ V := (stdOrthonormalBasis ℝ V).reindex (finCongr hrank.out)
   refine ⟨((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o, o, basis 0 +ᵥ o, ?_, ?_, ?_, ?_⟩
@@ -107,7 +116,7 @@ theorem not_exist_angle_trisection :
   let e : P ≃ᵃⁱ[ℝ] ℂ := (AffineIsometryEquiv.vaddConst ℝ o).symm.trans
     (basis.equiv Complex.orthonormalBasisOneI (Equiv.refl _)).toAffineIsometryEquiv
   have hp₁ : e (((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o) =
-      2⁻¹ + 2⁻¹ * ↑√3 * Complex.I := by
+      2⁻¹ + 2⁻¹ * √3 * Complex.I := by
     simp_rw [e, AffineIsometryEquiv.trans_apply, AffineIsometryEquiv.coe_vaddConst_symm,
         vadd_vsub]
     simp
@@ -119,7 +128,7 @@ theorem not_exist_angle_trisection :
   have hinit : e '' {((2⁻¹ : ℝ) • basis 0 + (2⁻¹ * √3) • basis 1) +ᵥ o, o, basis 0 +ᵥ o} =
       {2⁻¹ + 2⁻¹ * √3 * Complex.I, 0, 1} := by
     simp_rw [Set.image_insert_eq, Set.image_singleton, hp₁, hp₂, hp₃]
-  have hnorm : ‖2⁻¹ + 2⁻¹ * ↑√3 * Complex.I‖ = 1 := by
+  have hnorm : ‖2⁻¹ + 2⁻¹ * √3 * Complex.I‖ = 1 := by
     rw [← sq_eq_sq₀ (by simp) (by simp), Complex.sq_norm]
     suffices 2⁻¹ * 2⁻¹ + 2⁻¹ * √3 * (2⁻¹ * √3) = 1 by simpa [Complex.normSq]
     grind
@@ -233,24 +242,31 @@ theorem dist_homothety_homothety {V : Type*} {P : Type*}
   simp_rw [dist_eq_norm_vsub, AffineMap.homothety_apply, vadd_vsub_vadd_cancel_right,
     ← smul_sub, norm_smul, vsub_sub_vsub_cancel_right]
 
+/--
+**The impossibility of doubling the cube**
+
+Doubling the cube means that given any two points, constructing another two points
+(not necessarily distinct from the given ones) such that the distance between the constructed
+ones is `2 ^ (1/3)` times the distance between the given ones. The theorem is the negation of
+this, which is that there exists a pair of given points, one cannot construct the desired pair
+of points. We prove a slightly stronger version here, which is that for any pair of given points,
+one cannot construct the desired pair of points.
+-/
 theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     ¬ ∃ c d : P, ConstructiblePoint {a, b} c ∧ ConstructiblePoint {a, b} d ∧
     dist c d ^ 3 = 2 * dist a b ^ 3 := by
   classical
   push Not
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   intro c d hc hd hdist
   rw [← constructiblePoint_iff_equivComplexScaled h, Set.image_pair,
     equivComplexScaled_left, equivComplexScaled_right] at hc hd
   set c' := equivComplexScaled a b h c
   set d' := equivComplexScaled a b h d
   have hstar : ∀ x ∈ ({0, 1} : Set ℂ), conj x ∈ ({0, 1} : Set ℂ) := by simp
-  have hc' := hc.mem_constructibleClosure hstar
-  have hd' := hd.mem_constructibleClosure hstar
   have hcd : dist c' d' ∈ constructibleClosure (Subfield.closure ({0, 1} : Set ℝ)) ℝ := by
     rw [dist_eq_norm_sub, ← re_im_image_01]
     apply norm_mem_constructibleClosure
-    exact sub_mem hc' hd'
+    exact sub_mem (hc.mem_constructibleClosure hstar) (hd.mem_constructibleClosure hstar)
   rw [← constructibleClosure_transfer_ℚ_01] at hcd
   have hquad : (minpoly ℚ (dist c' d')).natDegree.isPowerOfTwo :=
     isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hcd

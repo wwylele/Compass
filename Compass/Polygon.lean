@@ -8,6 +8,23 @@ import all Init.Data.Nat.Power2.Basic
 import Mathlib.Analysis.Complex.Angle
 import Mathlib.Geometry.Euclidean.Triangle
 
+/-!
+
+# Constructible angles and regular polygons
+
+This file characterize the constructibility of angles `k * (2 * π)` for rational number `k`.
+The **Gauss–Wantzel theorem** for constructibility of regular polygons follows. The
+characterization says the following are equivalent for `0 ≤ k ≤ 2⁻¹:
+- The angle `k * (2 * π)` is constructible (one can construct three points that form
+  the angle from two given points).
+- The `k.den`-gon is constructible.
+- `Complex.exp (k * (2 * π * I))`, `Real.sin (k * (2 * π))`, and `Real.cos (k * (2 * π)`
+  are constructible numbers `constructibleClosure ℚ ℂ` or `constructibleClosure ℚ ℝ`.
+- `k.den.totient` is a power of two.
+- `k.den` is a product of a power of two and zero or some distinct Fermat primes.
+
+-/
+
 public section
 
 open scoped Real IntermediateField
@@ -265,7 +282,6 @@ theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b :
   rw [← exp_mem_constructibleClosure_iff_isPowerOfTwo_totient, constructibleClosure_transfer_ℚ_01,
     ← constructiblePoint_iff_mem_constructibleClosure (by grind)
     (ConstructiblePoint.given 0 (by simp)) (ConstructiblePoint.given 1 (by simp))]
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_finrank_pos (by simp [hrank.out])
   have ha : equivComplexScaled a b h a = 0 := by simp
   have hb : equivComplexScaled a b h b = 1 := by simp
   have hangle (c : P) : ∠ b a c = ∠ 1 0 (equivComplexScaled a b h c) := by
@@ -280,7 +296,7 @@ theorem constructible_angle {k : ℚ} (hk0 : 0 ≤ k) (hk : k ≤ 2⁻¹) {a b :
     push_cast; ring
   have h0 : ConstructiblePoint {0, 1} (0 : ℂ) := ConstructiblePoint.given 0 (by simp)
   have h1 : ConstructiblePoint {0, 1} (1 : ℂ) := ConstructiblePoint.given 1 (by simp)
-  have hcangle : ∠ 1 0 (Complex.exp (k * (2 * ↑π * Complex.I))) = 2 * π * k := by
+  have hcangle : ∠ 1 0 (Complex.exp (k * (2 * π * Complex.I))) = 2 * π * k := by
     rw [EuclideanGeometry.angle]
     simp_rw [vsub_eq_sub, sub_zero]
     rw [Complex.angle_one_left (by simp)]

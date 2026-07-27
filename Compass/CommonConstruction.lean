@@ -21,6 +21,8 @@ This file shows the constructibility of common geometric objects
 
 public section
 
+attribute [instance] FiniteDimensional.of_fact_finrank_eq_two
+
 namespace EuclideanGeometry
 
 variable {V P : Type*}
@@ -40,7 +42,6 @@ theorem ConstructiblePoint.perpBisector {initial : Set P} {a b : P}
     apply ConstructibleCircle.centerRadius _ a hb ha
     rw [mem_sphere]
   have hoo : (⟨a, dist a b⟩ : Sphere P) ≠ ⟨b, dist a b⟩ := by simp [hab]
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_fact_finrank_eq_two
   let : Module.Oriented ℝ V _ :=
     ⟨Module.Basis.orientation (Module.finBasisOfFinrankEq ℝ V hrank.out)⟩
   have hnorm : ‖√3 / 2‖ ^ 2 + ‖(2⁻¹ : ℝ)‖ ^ 2 = 1 := by
@@ -197,7 +198,6 @@ theorem mem_reflection_plane
     [l.direction.HasOrthogonalProjection] (hbl : b ∉ l)
     (h : dist a b = dist a (reflection l b)) :
     a ∈ l := by
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_fact_finrank_eq_two
   have h2 : ‖a -ᵥ reflection l a + (reflection l a -ᵥ reflection l b)‖ ^ 2 =
       ‖a -ᵥ reflection l a + (reflection l a -ᵥ b)‖ ^ 2 := by
     congrm ?_ ^ 2
@@ -230,7 +230,6 @@ theorem ConstructibleLine.ortho {initial : Set P} {l m : AffineSubspace ℝ P} {
     (hlm : m.direction = l.directionᗮ) :
     ConstructibleLine initial m := by
   have : Nonempty m := ⟨p, hpm⟩
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_fact_finrank_eq_two
   have hm : Module.finrank ℝ m.direction = 1 := by
     have h := Submodule.finrank_add_finrank_orthogonal (l.direction)
     rw [hl.finrank, hrank.out, ← hlm] at h
@@ -238,7 +237,6 @@ theorem ConstructibleLine.ortho {initial : Set P} {l m : AffineSubspace ℝ P} {
   classical
   have hl' := hl
   cases hl with | twoPoints a b ha hb hab l hal hbl hl
-  have : FiniteDimensional ℝ l.direction := FiniteDimensional.of_finrank_pos (by simp [hl])
   have hlm' : l.direction.IsOrtho m.direction := by
     rw [Submodule.isOrtho_iff_le, hlm, Submodule.orthogonal_orthogonal]
   obtain ⟨q, hq⟩ := AffineSubspace.inter_eq_singleton_of_nonempty_of_isCompl (hl'.nonempty)
@@ -301,7 +299,6 @@ theorem ConstructibleLine.parallel {initial : Set P} {l m : AffineSubspace ℝ P
     (hl : ConstructibleLine initial l) (hp : ConstructiblePoint initial p) (hpm : p ∈ m)
     (hlm : m.direction = l.direction) :
     ConstructibleLine initial m := by
-  have : FiniteDimensional ℝ V := FiniteDimensional.of_fact_finrank_eq_two
   have hortho : ConstructibleLine initial (AffineSubspace.mk' p l.directionᗮ) :=
     hl.ortho hp (AffineSubspace.self_mem_mk' p _) (by rw [AffineSubspace.direction_mk'])
   apply hortho.ortho hp hpm
