@@ -68,12 +68,12 @@ lemma relrank_sup_left_le (M B : IntermediateField K L)
   have hfin : Module.rank ↥(M ⊓ B) ↥(extendScalars hInfB) < Cardinal.aleph0 := hRB ▸ h
   have : Module.Free ↥(M ⊓ B) ↥(extendScalars hInfB) := by
     apply Module.Free.of_divisionRing
-  haveI : Module.Finite ↥(M ⊓ B) ↥(extendScalars hInfB) := Module.rank_lt_aleph0_iff.mp hfin
-  haveI : Algebra.IsAlgebraic ↥(M ⊓ B) ↥(extendScalars hInfB) :=
+  have : Module.Finite ↥(M ⊓ B) ↥(extendScalars hInfB) := Module.rank_lt_aleph0_iff.mp hfin
+  have : Algebra.IsAlgebraic ↥(M ⊓ B) ↥(extendScalars hInfB) :=
     Algebra.IsAlgebraic.of_finite _ _
   -- Set up the field tower `(M ⊓ B) → M → L`.
-  letI : Algebra ↥(M ⊓ B) ↥M := (inclusion (inf_le_left : M ⊓ B ≤ M)).toAlgebra
-  haveI : IsScalarTower ↥(M ⊓ B) ↥M L := IsScalarTower.of_algebraMap_eq (fun _ => rfl)
+  let : Algebra ↥(M ⊓ B) ↥M := (inclusion (inf_le_left : M ⊓ B ≤ M)).toAlgebra
+  have : IsScalarTower ↥(M ⊓ B) ↥M L := IsScalarTower.of_algebraMap_eq (fun _ => rfl)
   -- The compositum degree bound for algebraic extensions.
   have key := adjoin_rank_le_of_isAlgebraic_right (F := ↥(M ⊓ B)) (E := ↥M) (K := L)
     (extendScalars hInfB)

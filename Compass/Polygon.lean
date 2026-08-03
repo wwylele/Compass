@@ -14,7 +14,7 @@ import Mathlib.Geometry.Euclidean.Triangle
 
 This file characterize the constructibility of angles `k * (2 * π)` for rational number `k`.
 The **Gauss–Wantzel theorem** for constructibility of regular polygons follows. The
-characterization says the following are equivalent for `0 ≤ k ≤ 2⁻¹:
+characterization says the following are equivalent for `0 ≤ k ≤ 2⁻¹`:
 - The angle `k * (2 * π)` is constructible (one can construct three points that form
   the angle from two given points).
 - The `k.den`-gon is constructible.
