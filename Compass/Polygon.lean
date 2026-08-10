@@ -270,6 +270,39 @@ theorem sin_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
     apply pow_mem
     exact h
 
+theorem example_3_mem_constructibleClosure :
+    Complex.exp ((2 * π * Complex.I) / 3) ∈ constructibleClosure ℚ ℂ := by
+  convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 3⁻¹)).mpr (by simp +decide)
+  ring
+
+theorem example_4_mem_constructibleClosure :
+    Complex.exp ((2 * π * Complex.I) / 4) ∈ constructibleClosure ℚ ℂ := by
+  convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 4⁻¹)).mpr (by simp +decide)
+  ring
+
+theorem example_5_mem_constructibleClosure :
+    Complex.exp ((2 * π * Complex.I) / 5) ∈ constructibleClosure ℚ ℂ := by
+  convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 5⁻¹)).mpr (by simp +decide)
+  ring
+
+theorem example_11_mem_constructibleClosure :
+    Complex.exp ((2 * π * Complex.I) / 11) ∉ constructibleClosure ℚ ℂ := by
+  convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 11⁻¹)).not.mpr
+    (by simp +decide)
+  ring
+
+theorem example_17_mem_constructibleClosure :
+    Complex.exp ((2 * π * Complex.I) / 17) ∈ constructibleClosure ℚ ℂ := by
+  convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 17⁻¹)).mpr (by simp +decide)
+  ring
+
+set_option maxRecDepth 1000000 in
+theorem example_65537_mem_constructibleClosure :
+    Complex.exp ((2 * π * Complex.I) / 65537) ∈ constructibleClosure ℚ ℂ := by
+  convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 65537⁻¹)).mpr
+    (by simp +decide)
+  ring
+
 namespace EuclideanGeometry
 
 variable {V P : Type*}
