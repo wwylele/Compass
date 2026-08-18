@@ -46,7 +46,7 @@ theorem Nat.isPowerOfTwo_mul_iff (m n : ℕ) :
 theorem Nat.isPowerOfTwo_prod_iff {ι : Type*} (f : ι → ℕ) (s : Finset ι) :
     (∏ i ∈ s, f i).isPowerOfTwo ↔ ∀ i ∈ s, (f i).isPowerOfTwo := by
   induction s using Finset.cons_induction with
-  | empty => simpa using Nat.isPowerOfTwo_one
+  | empty => simp
   | cons a s h ih =>
     simp [Nat.isPowerOfTwo_mul_iff, ih]
 

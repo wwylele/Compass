@@ -152,58 +152,12 @@ theorem isIteratedQuadraticExtension_of_exists_tower {f : IntermediateField K L}
     · rw [← htop]
       exact h (Fin.last n)
 
-theorem Sylow.exists_subgroup_tower {G : Type*} [Group G] {p : ℕ} {n : ℕ} (hp : p.Prime)
-    (h : Nat.card G = p ^ n) :
-    ∃ f : Fin (n + 1) → Subgroup G, (∀ k : Fin (n + 1), Nat.card (f k) = p ^ k.val) ∧
-    (∀ k : Fin n, f k.castSucc ≤ f k.succ) := by
-  induction n generalizing G with
-  | zero =>
-    use ![⊥]
-    simp
-  | succ n ih =>
-    have : Finite G := by
-      apply Nat.finite_of_card_ne_zero
-      simpa [h] using hp.ne_zero
-    have : Fact (Nat.Prime p) := ⟨hp⟩
-    obtain ⟨s, hs⟩ := Sylow.exists_subgroup_card_pow_prime p
-      (show p ^ n ∣ Nat.card G by simp [h, pow_add])
-    obtain ⟨f, h1, h2⟩ := ih hs
-    let f' := fun (k : Fin (n + 2)) ↦
-      if hk : k = Fin.last (n + 1) then
-        ⊤
-      else
-        Subgroup.map s.subtype (f (Fin.castPred k hk))
-    use f'
-    constructor
-    · intro k
-      by_cases hk : k = Fin.last (n + 1)
-      · simpa [f', hk] using h
-      · simp only [hk, ↓reduceDIte, f']
-        rw [Subgroup.card_map_of_injective (Subgroup.subtype_injective _)]
-        apply h1
-    · intro k
-      by_cases hk : k = Fin.last n
-      · suffices f' k.succ = ⊤ by simp [this]
-        have hk' : k.succ = Fin.last (n + 1) := by
-          simp [hk]
-        simp [f', hk']
-      · have hk' : k.succ ≠ Fin.last (n + 1) := by
-          simpa using hk
-        have hk'' : k.castSucc ≠ Fin.last (n + 1) := by
-          simp
-        simp only [hk', hk'', ↓reduceDIte, f']
-        simp only [Subgroup.map_subtype_le_map_subtype]
-        convert h2 (k.castPred hk)
-        · simp
-        · ext
-          simp
-
 theorem IsIteratedQuadraticExtension.isPowerOfTwo_finrank {f : IntermediateField K L}
     (hf : IsIteratedQuadraticExtension f) :
     (Module.finrank K f).isPowerOfTwo :=
 match hf with
 | IsIteratedQuadraticExtension.bot => by
-  simpa using Nat.isPowerOfTwo_one
+  simp
 | IsIteratedQuadraticExtension.extension e f he hef h => by
   rw [← IntermediateField.finrank_bot_mul_relfinrank hef,
     IntermediateField.relfinrank_eq_toNat_relrank e f, h, Cardinal.toNat_ofNat]
@@ -223,22 +177,23 @@ theorem isIteratedQuadraticExtension_iff_isPowerOfTwo_finrank {f : IntermediateF
     have hcard : Nat.card Gal(f/K) = 2 ^ n := by
       rw [IsGalois.card_aut_eq_finrank]
       exact hn
-    obtain ⟨s, hs1, hs2⟩ := Sylow.exists_subgroup_tower Nat.prime_two hcard
+    obtain ⟨s, hs⟩ := Sylow.exists_orderEmbedding Nat.prime_two (dvd_of_eq hcard.symm)
     have hle (k : Fin n) : IntermediateField.fixedField (s k.castSucc.rev) ≤
         IntermediateField.fixedField (s k.succ.rev) := by
       apply IntermediateField.fixedField_le
       rw [Fin.rev_succ, Fin.rev_castSucc]
-      apply hs2
+      apply s.monotone
+      grind
     apply isIteratedQuadraticExtension_of_exists_tower
       (fun k ↦ IntermediateField.lift (IntermediateField.fixedField (s (Fin.rev k))))
     · have : s (Fin.last n) = ⊤ := by
         apply Subgroup.eq_top_of_card_eq
-        rw [hcard, hs1]
+        rw [hcard, hs]
         simp
       simp [this]
     · have : s 0 = ⊥ := by
         apply Subgroup.eq_bot_of_card_eq
-        simp [hs1]
+        simp [hs]
       simp [this]
     · intro k
       apply IntermediateField.map_mono _ (hle k)
@@ -246,7 +201,7 @@ theorem isIteratedQuadraticExtension_iff_isPowerOfTwo_finrank {f : IntermediateF
       unfold IntermediateField.lift
       rw [IntermediateField.relrank_map_map]
       have h := IntermediateField.relfinrank_mul_finrank_top (hle k)
-      simp_rw [IntermediateField.finrank_fixedField_eq_card, hs1] at h
+      simp_rw [IntermediateField.finrank_fixedField_eq_card, hs] at h
       rw [← Cardinal.toNat_eq_ofNat, ← IntermediateField.relfinrank_eq_toNat_relrank]
       rw [Nat.eq_div_of_mul_eq_left (by simp) h]
       rw [Nat.pow_div (by grind) (by simp)]
@@ -850,7 +805,6 @@ theorem constructibleClosure_transfer_ℚ_01 [CharZero L] {x : L} :
 theorem re_im_image_01 : Complex.re '' {0, 1} ∪ Complex.im '' {0, 1} = {0, 1} := by
   ext x
   simp
-  grind
 
 theorem mem_constructibleClosure_complex_ℚ_iff {x : ℂ} :
     x ∈ constructibleClosure ℚ ℂ ↔
