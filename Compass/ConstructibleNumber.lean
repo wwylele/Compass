@@ -233,6 +233,61 @@ theorem IsIteratedQuadraticExtension.isPowerOfTwo_natDegree_minpoly {f : Interme
   rw [← hminpoly] at hdvd
   exact h2.dvd hdvd
 
+theorem Polynomial.mem_support_derivative' {R : Type*} {n : ℕ} [Semiring R] {p : Polynomial R}
+    (h : IsRightRegular (n + 1 : R)) :
+    n ∈ (derivative p).support ↔ n + 1 ∈ p.support := by
+  suffices ¬p.coeff (n + 1) * (n + 1 : ℕ) = 0 ↔ coeff p (n + 1) ≠ 0 by
+    simpa only [mem_support_iff, coeff_derivative, Ne, Nat.cast_succ]
+  simp [h]
+
+theorem Polynomial.degree_derivative' {R : Type*} [Semiring R] [Nontrivial R] {p : Polynomial R}
+    (hp : IsRightRegular (p.natDegree : R)) :
+    (derivative p).degree = ↑(p.natDegree - 1) := by
+  apply le_antisymm
+  · rw [derivative_apply]
+    apply le_trans (degree_sum_le _ _) (Finset.sup_le _)
+    intro n hn
+    apply le_trans (degree_C_mul_X_pow_le _ _) (WithBot.coe_le_coe.2 (tsub_le_tsub_right _ _))
+    apply le_natDegree_of_mem_supp _ hn
+  · have hp1 : 1 ≤ p.natDegree := by
+      contrapose! hp
+      simp_all [not_isRightRegular_zero]
+    refine Finset.le_sup ?_
+    rw [mem_support_derivative' (by
+      norm_cast
+      rw [Nat.sub_add_cancel hp1]
+      exact hp), tsub_add_cancel_of_le hp1, mem_support_iff, coeff_natDegree, leadingCoeff_ne_zero]
+    rintro rfl
+    simp [not_isRightRegular_zero] at hp
+
+theorem Irreducible.separable' {F : Type*} [Field F] {f : Polynomial F}
+    (hf : Irreducible f) (h : (f.natDegree : F) ≠ 0) :
+    f.Separable := by
+  rw [Polynomial.separable_iff_derivative_ne_zero hf, ← Polynomial.degree_eq_bot.ne,
+    Polynomial.degree_derivative' (IsRegular.of_ne_zero h).right]
+  simp
+
+theorem Algebra.IsSeparable.of_integral_of_finrank_lt {F K : Type*} [Field F] [Ring K] [IsDomain K]
+    [Algebra F K] [Algebra.IsIntegral F K] [Module.Finite F K]
+    (h : Module.finrank F K < ringChar F) :
+    Algebra.IsSeparable F K := by
+  rw [Algebra.isSeparable_def]
+  intro a
+  have ha : IsIntegral F a := (Algebra.isIntegral_iff _ _).mp ‹_› a
+  rw [IsSeparable]
+  apply Irreducible.separable' (minpoly.irreducible ha)
+  rw [Ne, ringChar.spec]
+  apply Nat.not_dvd_of_pos_of_lt (minpoly.natDegree_pos ha) ((minpoly.natDegree_le a).trans_lt h)
+
+theorem Algebra.IsSeparable.of_integral_of_rank_lt {F K : Type*} [Field F] [Ring K] [IsDomain K]
+    [Algebra F K] [Algebra.IsIntegral F K]
+    (h : Module.rank F K < ringChar F) :
+    Algebra.IsSeparable F K := by
+  have : Module.Finite F K := Module.rank_lt_aleph0_iff.mp (h.trans Cardinal.natCast_lt_aleph0)
+  apply Algebra.IsSeparable.of_integral_of_finrank_lt
+  convert! Cardinal.toNat_lt_toNat h Cardinal.natCast_lt_aleph0
+  rw [Cardinal.toNat_natCast]
+
 theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
     (P : L → Prop)
     (bot : ∀ x : K, P (algebraMap K L x))
@@ -258,32 +313,19 @@ theorem IsIteratedQuadraticExtension.mem_induction (h0 : (2 : L) ≠ 0)
   have : Module.Free f (IntermediateField.extendScalars hfg) := by
     apply Module.Free.of_divisionRing
   have : Algebra.IsSeparable f (IntermediateField.extendScalars hfg) := by
-    rw [Algebra.isSeparable_def]
-    intro a
-    have hint : IsIntegral f a := (IsAlgebraic.of_finite f a).isIntegral
-    have : (minpoly f a).natDegree ≤ 2 := by
-      apply (minpoly.natDegree_le a).trans_eq
-      rw [Module.finrank_eq_of_rank_eq hg]
-    have : 0 < (minpoly f a).natDegree := minpoly.natDegree_pos hint
-    set d := (minpoly f a).natDegree
-    interval_cases hd : d
-    · have : (minpoly f a).IsMonicOfDegree 1 := ⟨hd, minpoly.monic hint⟩
-      obtain ⟨r, h⟩ := Polynomial.isMonicOfDegree_one_iff.mp this
-      rw [IsSeparable, h]
-      exact Polynomial.separable_X_add_C r
-    · have : (minpoly f a).IsMonicOfDegree 2 := ⟨hd, minpoly.monic hint⟩
-      obtain ⟨r, s, h⟩ := Polynomial.isMonicOfDegree_two_iff.mp this
-      rw [IsSeparable]
-      rw [Polynomial.separable_iff_derivative_ne_zero (minpoly.irreducible hint)]
-      suffices (1 + 1) * Polynomial.X + Polynomial.C r ≠ 0 by simpa [h]
-      rw [show (1 + 1) = (2 : Polynomial ↥f) by norm_num]
-      intro h
-      contrapose h0
-      obtain h := congr((Polynomial.coeff $h 1))
-      have h : (2 : f) = 0 := by simpa using h
-      obtain h := congr(($h).val)
-      push_cast at h
-      exact h
+    by_cases! hchar : ringChar f = 0
+    · rw [CharP.ringChar_zero_iff_CharZero] at hchar
+      apply Algebra.IsSeparable.of_integral
+    rw [← Nat.pos_iff_ne_zero] at hchar
+    apply Algebra.IsSeparable.of_integral_of_rank_lt
+    rw [hg, Nat.ofNat_lt_cast]
+    by_contra! hchar2
+    interval_cases hchareq : ringChar f
+    · simp_all
+    · apply h0
+      rw [Algebra.ringChar_eq f L] at hchareq
+      have : CharP L 2 := ringChar.of_eq hchareq
+      apply CharP.ofNat_eq_zero
   obtain ⟨a, ha⟩ := Field.exists_primitive_element f (IntermediateField.extendScalars hfg)
   rw [← ha]
   apply IntermediateField.adjoin_induction

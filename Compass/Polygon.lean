@@ -285,7 +285,7 @@ theorem example_5_mem_constructibleClosure :
   convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 5⁻¹)).mpr (by simp +decide)
   ring
 
-theorem example_11_mem_constructibleClosure :
+theorem example_11_notMem_constructibleClosure :
     Complex.exp ((2 * π * Complex.I) / 11) ∉ constructibleClosure ℚ ℂ := by
   convert (exp_mem_constructibleClosure_iff_isPowerOfTwo_totient (k := 11⁻¹)).not.mpr
     (by simp +decide)
