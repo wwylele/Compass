@@ -19,6 +19,15 @@ theorem _root_.Challenge.not_exist_angle_trisection :
     3 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ :=
   EuclideanGeometry.not_exist_angle_trisection
 
+theorem _root_.Challenge.exist_angle_bisection :
+    ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
+    ∃ q₁ q₂ q₃ : P,
+    ConstructiblePoint {p₁, p₂, p₃} q₁ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₂ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
+    2 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ :=
+  EuclideanGeometry.exist_angle_bisection
+
 theorem _root_.Challenge.not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     ¬ ∃ c d : P, ConstructiblePoint {a, b} c ∧ ConstructiblePoint {a, b} d ∧
     dist c d ^ 3 = 2 * dist a b ^ 3 :=

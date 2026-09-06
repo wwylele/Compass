@@ -7,6 +7,7 @@ import Mathlib.Algebra.Polynomial.SpecificDegree
 import Mathlib.Analysis.Complex.Angle
 import Mathlib.Analysis.InnerProductSpace.PiL2
 import Mathlib.FieldTheory.PrimeField
+import Mathlib.Geometry.Euclidean.Congruence
 import Mathlib.RingTheory.Polynomial.RationalRoot
 import Mathlib.RingTheory.Localization.Rat
 
@@ -234,13 +235,46 @@ theorem not_exist_angle_trisection :
   absurd hwremem
   simp +decide
 
-theorem dist_homothety_homothety {V : Type*} {P : Type*}
-    [SeminormedAddCommGroup V] [PseudoMetricSpace P] [NormedAddTorsor V P]
-    {𝕜 : Type*} [NormedField 𝕜] [NormedSpace 𝕜 V]
-    (c : P) (r : 𝕜) (a b : P) :
-    dist (AffineMap.homothety c r a) (AffineMap.homothety c r b) = ‖r‖ * dist a b := by
-  simp_rw [dist_eq_norm_vsub, AffineMap.homothety_apply, vadd_vsub_vadd_cancel_right,
-    ← smul_sub, norm_smul, vsub_sub_vsub_cancel_right]
+theorem exist_angle_bisection :
+    ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
+    ∃ q₁ q₂ q₃ : P,
+    ConstructiblePoint {p₁, p₂, p₃} q₁ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₂ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
+    2 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ := by
+  intro p₁ p₂ p₃ h₁₂ h₂₃ h₁₃
+  let p₃' := (dist p₁ p₂ / dist p₃ p₂) • (p₃ -ᵥ p₂) +ᵥ p₂
+  have hp₃ : (dist p₁ p₂ / dist p₃ p₂) • (p₃ -ᵥ p₂) = p₃' -ᵥ p₂ := by
+    simp [p₃']
+  have h₂₃' : p₂ ≠ p₃' := by
+    symm
+    rw [← vsub_ne_zero, ← hp₃]
+    simp [h₁₂, h₂₃.symm]
+  have hdist : dist p₁ p₂ = dist p₃' p₂ := by
+    rw [dist_eq_norm_vsub _ p₃', ← hp₃, norm_smul, ← dist_eq_norm_vsub]
+    simp only [norm_div, Real.norm_eq_abs, abs_dist]
+    rw [div_mul_cancel₀ _ (by simpa using h₂₃.symm)]
+  use p₁, p₂, midpoint ℝ p₁ p₃'
+  refine ⟨ConstructiblePoint.given _ (by simp), ConstructiblePoint.given _ (by simp), ?_, ?_⟩
+  · apply ConstructiblePoint.midpoint (ConstructiblePoint.given _ (by simp))
+    refine ConstructiblePoint.lineCircle line[ℝ, p₂, p₃] ⟨p₂, dist p₁ p₂⟩ ?_ ?_ _ ?_ ?_
+    · exact ConstructibleLine.pair (ConstructiblePoint.given _ (by simp))
+        (ConstructiblePoint.given _ (by simp)) h₂₃
+    · exact ConstructibleCircle.centerRadius _ p₁ (ConstructiblePoint.given _ (by simp))
+        (ConstructiblePoint.given _ (by simp)) (by simp [mem_sphere])
+    · rw [vadd_left_mem_affineSpan_pair]
+      simp
+    · simp [mem_sphere, hdist]
+  · have : Congruent ![p₁, p₂, midpoint ℝ p₁ p₃'] ![p₃', p₂, midpoint ℝ p₁ p₃'] := by
+      apply EuclideanGeometry.side_side_side hdist rfl
+      simp_rw [dist_comm (midpoint _ _ _)]
+      apply dist_left_midpoint_eq_dist_right_midpoint
+    have hangle : ∠ p₁ p₂ (midpoint ℝ p₁ p₃') = ∠ p₃' p₂ (midpoint ℝ p₁ p₃') :=
+      EuclideanGeometry.angle_eq_of_congruent this 0 1 2
+    rw [← EuclideanGeometry.angle_smul_right_of_pos p₁
+      (div_pos (by simpa using h₁₂) (by simpa using h₂₃.symm)) hp₃]
+    rw [← EuclideanGeometry.angle_add_of_ne_of_ne h₁₂.symm h₂₃' (wbtw_midpoint ℝ p₁ p₃')]
+    rw [EuclideanGeometry.angle_comm (midpoint _ _ _), hangle, two_mul]
 
 /--
 **The impossibility of doubling the cube**
@@ -272,7 +306,7 @@ theorem not_exist_doubling_cube {a b : P} (h : a ≠ b) :
     isPowerOfTwo_natDegree_minpoly_of_mem_constructibleClosure hcd
   have hdist : dist c' d' ^ 3 = 2 := by
     simp_rw [c', d', equivComplexScaled_apply]
-    simp_rw [Isometry.dist_eq (AffineIsometryEquiv.isometry _), dist_homothety_homothety]
+    simp_rw [Isometry.dist_eq (AffineIsometryEquiv.isometry _), dist_homothety]
     rw [mul_pow, hdist, dist_eq_norm_vsub', norm_inv, norm_norm, inv_pow]
     rw [mul_comm 2, inv_mul_cancel_left₀ (by simpa using h.symm)]
   have hwp : minpoly ℚ (dist c' d') ∣ Polynomial.X ^ 3 - 2 := by

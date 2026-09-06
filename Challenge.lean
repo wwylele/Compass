@@ -43,6 +43,11 @@ inductive ConstructibleCircle [Fact (Module.finrank ℝ V = 2)] (initial : Set P
 
 end
 
+-- Notes for review: one should be careful of junk values of `EuclideanGeometry.angle`
+-- where `EuclideanGeometry.angle = π / 2` for degenerate inputs. If the statement doesn't rule
+-- out degenerate inputs, it becomes trivially true or false. To validate that this is the correct
+-- formalization, we also prove `Challenge.exist_angle_bisection`, which is a direct negation of
+-- `Challenge.not_exist_angle_trisection` with `3` replaced by `2`.
 theorem _root_.Challenge.not_exist_angle_trisection :
     ¬ ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
     ∃ q₁ q₂ q₃ : P,
@@ -50,6 +55,15 @@ theorem _root_.Challenge.not_exist_angle_trisection :
     ConstructiblePoint {p₁, p₂, p₃} q₂ ∧
     ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
     3 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ := by
+  sorry
+
+theorem _root_.Challenge.exist_angle_bisection :
+    ∀ p₁ p₂ p₃ : P, p₁ ≠ p₂ → p₂ ≠ p₃ → p₁ ≠ p₃ →
+    ∃ q₁ q₂ q₃ : P,
+    ConstructiblePoint {p₁, p₂, p₃} q₁ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₂ ∧
+    ConstructiblePoint {p₁, p₂, p₃} q₃ ∧
+    2 * ∠ q₁ q₂ q₃ = ∠ p₁ p₂ p₃ := by
   sorry
 
 theorem _root_.Challenge.not_exist_doubling_cube {a b : P} (h : a ≠ b) :
