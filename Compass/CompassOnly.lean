@@ -8,6 +8,8 @@ import Mathlib.Geometry.Euclidean.Angle.Unoriented.RightAngle
 import Mathlib.Geometry.Euclidean.Circumcenter
 import Mathlib.Geometry.Euclidean.Similarity
 import Mathlib.Geometry.Euclidean.Triangle
+import Mathlib.Geometry.Euclidean.Inversion.ImageHyperplane
+import Mathlib.Geometry.Euclidean.Sphere.SecondInter
 
 /-!
 
@@ -49,12 +51,180 @@ theorem CompassConstructibleCircle.compassConstructiblePoint_center {initial : S
   | CompassConstructibleCircle.centerRadius o _ hcenter _ ho =>
     hcenter
 
+theorem CompassConstructibleCircle.compassConstructiblePoint_radius {initial : Set P}
+    {o : Sphere P} (ho : CompassConstructibleCircle initial o) :
+    ∃ r, CompassConstructiblePoint initial r ∧ r ∈ o := match ho with
+  | CompassConstructibleCircle.centerRadius o r _ hr ho =>
+    ⟨r, hr, ho⟩
+
 theorem CompassConstructibleCircle.radius_nonneg {initial : Set P}
     {o : Sphere P} (ho : CompassConstructibleCircle initial o) :
     0 ≤ o.radius := match ho with
   | CompassConstructibleCircle.centerRadius o r hcenter hr ho => by
     rw [mem_sphere] at ho
     simp [← ho]
+
+@[simp]
+theorem _root_.EuclideanGeometry_reflection_perpBisector {V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (a b : P) [(AffineSubspace.perpBisector a b).direction.HasOrthogonalProjection] :
+    haveI : Nonempty ↥(AffineSubspace.perpBisector a b) :=
+      AffineSubspace.perpBisector_nonempty.to_subtype
+    reflection (AffineSubspace.perpBisector a b) a = b := by
+  have : Nonempty ↥(AffineSubspace.perpBisector a b) :=
+    AffineSubspace.perpBisector_nonempty.to_subtype
+  rw [reflection_apply_of_mem _ _ (AffineSubspace.midpoint_mem_perpBisector a b)]
+  simp only [AffineSubspace.direction_perpBisector, left_vsub_midpoint, invOf_eq_inv, map_smul]
+  rw [Submodule.reflection_orthogonal_apply]
+  rw [← map_neg, neg_vsub_eq_vsub_rev]
+  rw [(Submodule.reflection_eq_self_iff _).mpr (by simp)]
+  symm
+  rw [eq_vadd_iff_vsub_eq]
+  simp
+
+theorem CompassConstructiblePoint.reflection {initial : Set P} {a b c : P}
+    (ha : CompassConstructiblePoint initial a)
+    (hb : CompassConstructiblePoint initial b) (hc : CompassConstructiblePoint initial c)
+    (hbc : b ≠ c) :
+    CompassConstructiblePoint initial (reflection line[ℝ, b, c] a) := by
+  refine CompassConstructiblePoint.twoCircles ⟨b, dist a b⟩ ⟨c, dist a c⟩ ?_ ?_ ?_ _ ?_ ?_
+  · exact CompassConstructibleCircle.centerRadius _ a hb ha (by simp [mem_sphere])
+  · exact CompassConstructibleCircle.centerRadius _ a hc ha (by simp [mem_sphere])
+  · simp [hbc]
+  · simp [dist_comm a b, mem_sphere',
+      EuclideanGeometry.dist_reflection_eq_of_mem line[ℝ, b, c] (left_mem_affineSpan_pair _ _ _ )]
+  · simp [dist_comm a c, mem_sphere',
+      EuclideanGeometry.dist_reflection_eq_of_mem line[ℝ, b, c] (right_mem_affineSpan_pair _ _ _ )]
+
+theorem CompassConstructibleCircle.centerRadius' {initial : Set P} {a : Sphere P} {b r : P}
+    (ha : CompassConstructiblePoint initial a.center) (hb : CompassConstructiblePoint initial b)
+    (hr : CompassConstructiblePoint initial r) (hor : a.radius = dist b r) :
+    CompassConstructibleCircle initial a := by
+  by_cases! hab : a.center = b
+  · apply CompassConstructibleCircle.centerRadius _ r ha hr
+    rw [mem_sphere', hab, hor]
+  let : Module.Oriented ℝ V _ :=
+    ⟨Module.Basis.orientation (Module.finBasisOfFinrankEq ℝ V hrank.out)⟩
+  have hnorm : ‖√3 / 2‖ ^ 2 + ‖(2⁻¹ : ℝ)‖ ^ 2 = 1 := by
+    rw [Real.norm_eq_abs, ← abs_pow, div_pow]
+    norm_num
+  let c := (√3 / 2) • o.rotation (π / 2 : ℝ) (b -ᵥ a.center) +ᵥ midpoint ℝ a.center b
+  let d := (-(√3 / 2) • o.rotation (π / 2 : ℝ) (b -ᵥ a.center) +ᵥ midpoint ℝ a.center b)
+  have ho1 : CompassConstructibleCircle initial ⟨a.center, dist a.center b⟩ := by
+    apply CompassConstructibleCircle.centerRadius ⟨a.center, dist a.center b⟩ b ha hb
+    rw [dist_comm, mem_sphere]
+  have ho2 : CompassConstructibleCircle initial ⟨b, dist a.center b⟩ := by
+    apply CompassConstructibleCircle.centerRadius ⟨b, dist a.center b⟩ a.center hb ha
+    rw [mem_sphere]
+  have hoo : (⟨a.center, dist a.center b⟩ : Sphere P) ≠ ⟨b, dist a.center b⟩ := by simp [hab]
+  have hca : dist c a.center = dist a.center b := by
+    rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+    rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a.center b) _).mpr ?_]
+    · rw [← sq, ← sq]
+      rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+        mul_pow, (o.rotation ↑(π / 2)).norm_map, left_vsub_midpoint, norm_smul, mul_pow,
+        ← neg_vsub_eq_vsub_rev b a.center, norm_neg, ← add_mul, invOf_eq_inv]
+      rw [hnorm]
+      simp
+    · apply angle_eq_pi_div_two_of_oangle_eq_pi_div_two
+      rw [EuclideanGeometry.oangle, vadd_vsub, left_vsub_midpoint,
+        ← neg_vsub_eq_vsub_rev b a.center,
+        smul_neg, o.oangle_neg_right (by simpa using hab.symm) (by simpa using hab.symm),
+        o.oangle_smul_left_of_pos _ _ (by simp),
+        o.oangle_smul_right_of_pos _ _ (by simp),
+        o.oangle_rotation_self_left (by simpa using hab.symm)]
+      rw [← Real.Angle.coe_neg, ← Real.Angle.coe_add]
+      congr
+      ring
+  have hcb : dist c b = dist a.center b := by
+    rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+    rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a.center b) _).mpr ?_]
+    · rw [← sq, ← sq]
+      rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+        mul_pow, (o.rotation ↑(π / 2)).norm_map, right_vsub_midpoint, norm_smul, mul_pow,
+        ← neg_vsub_eq_vsub_rev b a.center, norm_neg, ← add_mul, invOf_eq_inv]
+      rw [hnorm]
+      simp
+    · apply angle_eq_pi_div_two_of_oangle_eq_neg_pi_div_two
+      rw [EuclideanGeometry.oangle, vadd_vsub, right_vsub_midpoint,
+        o.oangle_smul_left_of_pos _ _ (by simp),
+        o.oangle_smul_right_of_pos _ _ (by simp),
+        o.oangle_rotation_self_left (by simpa using hab.symm)]
+      rw [neg_div, Real.Angle.coe_neg]
+  have hc : CompassConstructiblePoint initial c := by
+    apply CompassConstructiblePoint.twoCircles _ _ ho1 ho2 hoo
+    · simpa [mem_sphere] using hca
+    · simpa [mem_sphere] using hcb
+  have hda : dist d a.center = dist a.center b := by
+    rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+    rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a.center b) _).mpr ?_]
+    · rw [← sq, ← sq]
+      rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+        mul_pow, (o.rotation ↑(π / 2)).norm_map, left_vsub_midpoint, norm_smul, mul_pow,
+        ← neg_vsub_eq_vsub_rev b a.center, norm_neg, norm_neg, ← add_mul, invOf_eq_inv]
+      rw [hnorm]
+      simp
+    · apply angle_eq_pi_div_two_of_oangle_eq_neg_pi_div_two
+      rw [EuclideanGeometry.oangle, vadd_vsub, left_vsub_midpoint,
+        o.oangle_smul_left_of_neg _ _ (by simp),
+        ← neg_vsub_eq_vsub_rev b a.center,
+        smul_neg, ← neg_smul,
+        o.oangle_smul_right_of_neg _ _ (by simp),
+        o.oangle_neg_neg,
+        o.oangle_rotation_self_left (by simpa using hab.symm)]
+      rw [neg_div, Real.Angle.coe_neg]
+  have hdb : dist d b = dist a.center b := by
+    rw [← sq_eq_sq₀ dist_nonneg dist_nonneg, sq]
+    rw [(dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ (midpoint ℝ a.center b) _).mpr ?_]
+    · rw [← sq, ← sq]
+      rw [dist_eq_norm_vsub, dist_eq_norm_vsub, dist_eq_norm_vsub, vadd_vsub, norm_smul,
+        mul_pow, (o.rotation ↑(π / 2)).norm_map, right_vsub_midpoint, norm_smul, mul_pow,
+        ← neg_vsub_eq_vsub_rev b a.center, norm_neg, norm_neg, ← add_mul, invOf_eq_inv]
+      rw [hnorm]
+      simp
+    · apply angle_eq_pi_div_two_of_oangle_eq_pi_div_two
+      rw [EuclideanGeometry.oangle, vadd_vsub, right_vsub_midpoint,
+        o.oangle_smul_left_of_neg _ _ (by simp),
+        o.oangle_smul_right_of_pos _ _ (by simp),
+        o.neg_rotation,
+        o.oangle_rotation_self_left (by simpa using hab.symm)]
+      rw [neg_add, Real.Angle.neg_coe_pi, ← Real.Angle.coe_neg, ← Real.Angle.coe_add]
+      congr
+      ring
+  have hd : CompassConstructiblePoint initial d := by
+    apply CompassConstructiblePoint.twoCircles _ _ ho1 ho2 hoo
+    · simpa [mem_sphere] using hda
+    · simpa [mem_sphere] using hdb
+  let ho3 : CompassConstructibleCircle initial ⟨c, dist r c⟩ := by
+    apply CompassConstructibleCircle.centerRadius _ r hc hr
+    simp [mem_sphere]
+  let ho4 : CompassConstructibleCircle initial ⟨d, dist r d⟩ := by
+    apply CompassConstructibleCircle.centerRadius _ r hd hr
+    simp [mem_sphere]
+  have hcd : c ≠ d := by
+    contrapose hab with h
+    simp only [neg_smul, vadd_right_cancel_iff, c, d] at h
+    rw [eq_neg_iff_add_eq_zero, ← two_smul ℝ] at h
+    symm
+    simpa using h
+  have : Nonempty ↥(AffineSubspace.perpBisector a.center b) :=
+     AffineSubspace.perpBisector_nonempty.to_subtype
+  let e := reflection (AffineSubspace.perpBisector a.center b) r
+  have he : CompassConstructiblePoint initial e := by
+    refine CompassConstructiblePoint.twoCircles _ _ ho3 ho4 (by simp [hcd]) _ ?_ ?_
+    · simp only [mem_sphere']
+      rw [dist_comm r c]
+      apply EuclideanGeometry.dist_reflection_eq_of_mem
+      rw [AffineSubspace.mem_perpBisector_iff_dist_eq]
+      rw [hca, hcb]
+    · simp only [mem_sphere']
+      rw [dist_comm r d]
+      apply EuclideanGeometry.dist_reflection_eq_of_mem
+      rw [AffineSubspace.mem_perpBisector_iff_dist_eq]
+      rw [hda, hdb]
+  apply CompassConstructibleCircle.centerRadius _ e ha he
+  rw [mem_sphere, hor, ← dist_reflection, dist_comm b r]
+  simp
 
 theorem CompassConstructiblePoint.double {initial : Set P} {a b : P}
     (ha : CompassConstructiblePoint initial a) (hb : CompassConstructiblePoint initial b) :
@@ -348,20 +518,6 @@ theorem CompassConstructiblePoint.inversion {initial : Set P} {p : P}
     exact hn.not_ge ho.radius_nonneg
   grind
 
-theorem CompassConstructiblePoint.reflection {initial : Set P} {a b c : P}
-    (ha : CompassConstructiblePoint initial a)
-    (hb : CompassConstructiblePoint initial b) (hc : CompassConstructiblePoint initial c)
-    (hbc : b ≠ c) :
-    CompassConstructiblePoint initial (reflection line[ℝ, b, c] a) := by
-  refine CompassConstructiblePoint.twoCircles ⟨b, dist a b⟩ ⟨c, dist a c⟩ ?_ ?_ ?_ _ ?_ ?_
-  · exact CompassConstructibleCircle.centerRadius _ a hb ha (by simp [mem_sphere])
-  · exact CompassConstructibleCircle.centerRadius _ a hc ha (by simp [mem_sphere])
-  · simp [hbc]
-  · simp [dist_comm a b, mem_sphere',
-      EuclideanGeometry.dist_reflection_eq_of_mem line[ℝ, b, c] (left_mem_affineSpan_pair _ _ _ )]
-  · simp [dist_comm a c, mem_sphere',
-      EuclideanGeometry.dist_reflection_eq_of_mem line[ℝ, b, c] (right_mem_affineSpan_pair _ _ _ )]
-
 theorem Affine.Simplex.span_eq_top' {k : Type*} {V : Type*} {P : Type*}
     [DivisionRing k] [AddCommGroup V] [Module k V] [AddTorsor V P]
     [FiniteDimensional k V] {n : ℕ} (T : Affine.Simplex k P n)
@@ -464,7 +620,93 @@ theorem CompassConstructibleCircle.threePoints {initial : Set P} {a b c : P}
         have : dist d a ≠ 0 := by simpa using hda
         grind
 
-/-mutual
+theorem eq_affineSpan_pair_of_mem {a b : P} (hab : a ≠ b) {l : AffineSubspace ℝ P}
+    (hl : Module.finrank ℝ l.direction = 1) (hal : a ∈ l) (hbl : b ∈ l) :
+    l = line[ℝ, a, b] := by
+  apply AffineSubspace.ext_of_direction_eq ?_ ⟨a, ⟨hal, left_mem_affineSpan_pair _ _ _⟩⟩
+  symm
+  apply Submodule.eq_of_le_of_finrank_eq
+  · apply AffineSubspace.direction_le
+    apply affineSpan_le_of_subset_coe
+    apply Set.pair_subset hal hbl
+  rw [direction_affineSpan, hl]
+  convert_to Module.finrank ℝ (vectorSpan ℝ (Set.range ![b, a])) = 1 using 1
+  · congrm Module.finrank ℝ (vectorSpan ℝ ?_)
+    simp
+  apply AffineIndependent.finrank_vectorSpan
+  · exact affineIndependent_of_ne _ hab.symm
+  simp
+
+theorem exists_compassConstructiblePoint_away_four {initial : Set P} {a b c d : P}
+    (ha : CompassConstructiblePoint initial a)
+    (hc : CompassConstructiblePoint initial c)
+    (hal : a ∉ line[ℝ, c, d]) (hcl : c ∉ line[ℝ, a, b]) :
+    ∃ p, CompassConstructiblePoint initial p ∧ p ∉ line[ℝ, a, b] ∧ p ∉ line[ℝ, c, d] := by
+  refine ⟨_, ha.double hc, ?_, ?_⟩
+  · contrapose hcl with h
+    obtain ⟨r, hr⟩ := vadd_left_mem_affineSpan_pair.mp h
+    rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+    use 2⁻¹ * r
+    rw [AffineMap.lineMap_apply]
+    symm
+    rw [eq_vadd_iff_vsub_eq, ← smul_smul]
+    symm
+    rw [inv_smul_eq_iff₀ (by simp), hr, ← Nat.cast_smul_eq_nsmul ℝ, Nat.cast_ofNat]
+  · rw [two_smul, add_vadd, vsub_vadd]
+    contrapose hal with h
+    obtain ⟨r, hr⟩ := vadd_left_mem_affineSpan_pair.mp h
+    rw [mem_affineSpan_pair_iff_exists_lineMap_eq]
+    use -r
+    simp [AffineMap.lineMap_apply, hr]
+
+omit hrank in
+theorem _root_.Collinear.cospherical_inverse {a b c p : P} (r : ℝ) (h : Collinear ℝ {a, b, c})
+    (hab : a ≠ b) (hp : p ∉ line[ℝ, a, b]) :
+    Cospherical {p, inversion p r a, inversion p r b, inversion p r c} := by
+  by_cases hr : r = 0
+  · simpa [hr] using cospherical_singleton p
+  let q := reflection line[ℝ, a, b] p
+  have hqp : q ≠ p := by
+    contrapose hp
+    rw [EuclideanGeometry.reflection_eq_self_iff] at hp
+    exact hp
+  have ha : a ∈ AffineSubspace.perpBisector p q := by
+    rw [AffineSubspace.mem_perpBisector_iff_dist_eq,
+      dist_reflection_eq_of_mem _ (left_mem_affineSpan_pair _ _ _)]
+  have hb : b ∈ AffineSubspace.perpBisector p q := by
+    rw [AffineSubspace.mem_perpBisector_iff_dist_eq,
+      dist_reflection_eq_of_mem _ (right_mem_affineSpan_pair _ _ _)]
+  have hc : c ∈ AffineSubspace.perpBisector p q := by
+    rw [AffineSubspace.mem_perpBisector_iff_dist_eq,
+      dist_reflection_eq_of_mem _ ?_]
+    exact h.mem_affineSpan_of_mem_of_ne (by simp) (by simp) (by simp) hab
+  have ha := Set.mem_image_of_mem (inversion p r) ha
+  have hb := Set.mem_image_of_mem (inversion p r) hb
+  have hc := Set.mem_image_of_mem (inversion p r) hc
+  rw [EuclideanGeometry.image_inversion_perpBisector hr hqp] at ha hb hc
+  use inversion p r q, (r ^ 2 / dist q p)
+  simp only [Set.mem_sdiff, Metric.mem_sphere, Set.mem_singleton_iff, inversion_eq_center',
+    not_or] at ha hb hc
+  simp [dist_center_inversion, dist_comm p q, ha.1, hb.1, hc.1]
+
+theorem _root_.EuclideanGeometry.image_inversion_sphere_dist_center' {V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    {c y : P} {R : ℝ} (hR : R ≠ 0) (hy : y ≠ c) :
+    inversion c R '' (Sphere.mk y (dist y c) \ {c}) =
+    AffineSubspace.perpBisector c (inversion c R y) := by
+  rw [Set.image_sdiff (inversion_injective _ hR), image_inversion_sphere_dist_center hR hy]
+  simp [hy, hR]
+
+theorem _root_.EuclideanGeometry.midpoint_reflection_mem {V P : Type*}
+    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
+    (p : P) (s : AffineSubspace ℝ P) [Nonempty s] [s.direction.HasOrthogonalProjection] :
+    midpoint ℝ p (reflection s p) ∈ s := by
+  have h : midpoint ℝ p (reflection s p) = ↑(orthogonalProjection s p) := by
+    rw [reflection_apply', midpoint_eq_iff, AffineEquiv.pointReflection_apply]
+  rw [h]
+  exact (orthogonalProjection s p).2
+
+mutual
 
 theorem ConstructiblePoint.compassConstructiblePoint {initial : Set P} {p : P}
     (hp : ConstructiblePoint initial p) :
@@ -472,9 +714,299 @@ theorem ConstructiblePoint.compassConstructiblePoint {initial : Set P} {p : P}
   | ConstructiblePoint.given p h =>
     CompassConstructiblePoint.given p h
   | ConstructiblePoint.twoLines l₁ l₂ hl₁ hl₂ hl p hpl₁ hpl₂ =>
-    ...
-  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo =>
-    ...
+    match hl₁ with
+    | ConstructibleLine.twoPoints a b ha hb hab _ hal hbl hl₁r =>
+    match hl₂ with
+    | ConstructibleLine.twoPoints c d hc hd hcd _ hcl hdl hl₂r => by
+      have ha := ha.compassConstructiblePoint
+      have hb := hb.compassConstructiblePoint
+      have hc := hc.compassConstructiblePoint
+      have hd := hd.compassConstructiblePoint
+      obtain rfl := eq_affineSpan_pair_of_mem hab hl₁r hal hbl
+      obtain rfl := eq_affineSpan_pair_of_mem hcd hl₂r hcl hdl
+      by_cases hacd : a ∈ line[ℝ, c, d]
+      · convert ha
+        contrapose! hl with hpa
+        rw [← affineSpan_pair_eq_of_mem_of_mem_of_ne (left_mem_affineSpan_pair _ _ _) hpl₁ hpa.symm]
+        rw [← affineSpan_pair_eq_of_mem_of_mem_of_ne hacd hpl₂ hpa.symm]
+      by_cases hcab : c ∈ line[ℝ, a, b]
+      · convert hc
+        contrapose! hl with hpc
+        rw [← affineSpan_pair_eq_of_mem_of_mem_of_ne (left_mem_affineSpan_pair _ _ _) hpl₂ hpc.symm]
+        rw [← affineSpan_pair_eq_of_mem_of_mem_of_ne hcab hpl₁ hpc.symm]
+      obtain ⟨q, hq, hqab, hqcd⟩ := exists_compassConstructiblePoint_away_four ha hc hacd hcab
+      let o : Sphere P := ⟨q, dist a q⟩
+      have haq : a ≠ q := by
+        contrapose hqab
+        simpa [← hqab] using left_mem_affineSpan_pair ℝ a b
+      have hbq : b ≠ q := by
+        contrapose hqab
+        simpa [← hqab] using right_mem_affineSpan_pair ℝ a b
+      have hcq : c ≠ q := by
+        contrapose hqcd
+        simpa [← hqcd] using left_mem_affineSpan_pair ℝ c d
+      have hdq : d ≠ q := by
+        contrapose hqcd
+        simpa [← hqcd] using right_mem_affineSpan_pair ℝ c d
+      have hr : o.radius ≠ 0 := by simpa [o] using haq
+      have ho : CompassConstructibleCircle initial o := by
+        apply CompassConstructibleCircle.centerRadius _ a hq ha
+        simp [mem_sphere, o]
+      have ha' := ha.inversion ho
+      have hb' := hb.inversion ho
+      have hc' := hc.inversion ho
+      have hd' := hd.inversion ho
+      have habp : Collinear ℝ {a, b, p} :=
+        collinear_triple_of_mem_affineSpan_pair (left_mem_affineSpan_pair _ _ _)
+          (right_mem_affineSpan_pair _ _ _) hpl₁
+      have hcdp : Collinear ℝ {c, d, p} :=
+        collinear_triple_of_mem_affineSpan_pair (left_mem_affineSpan_pair _ _ _)
+          (right_mem_affineSpan_pair _ _ _) hpl₂
+      have ⟨u, hu⟩ := cospherical_iff_exists_sphere.mp <|
+        habp.cospherical_inverse (dist a q) hab hqab
+      have ⟨v, hv⟩ := cospherical_iff_exists_sphere.mp <|
+        hcdp.cospherical_inverse (dist a q) hcd hqcd
+      simp_rw [Set.insert_subset_iff, Set.singleton_subset_iff] at hu hv
+      have hu' : CompassConstructibleCircle initial u := by
+        refine CompassConstructibleCircle.threePoints ha' hb' hq ?_ ?_ ?_ hu.2.1 hu.2.2.1 hu.1
+        · simpa [(inversion_injective _ hr).ne_iff] using hab
+        · simp [o, haq]
+        · simp [o, haq, hbq]
+      have hv' : CompassConstructibleCircle initial v := by
+        apply CompassConstructibleCircle.threePoints hc' hd' hq ?_ ?_ ?_ hv.2.1 hv.2.2.1 hv.1
+        · simpa [(inversion_injective _ hr).ne_iff] using hcd
+        · simp [o, haq, hcq]
+        · simp [o, haq, hdq]
+      have hp' : CompassConstructiblePoint initial (inversion o.center o.radius p) := by
+        refine CompassConstructiblePoint.twoCircles _ _ hu' hv' ?_ _ hu.2.2.2 hv.2.2.2
+        contrapose hl with huv
+        have hup : u.radius = dist u.center q := by
+          symm
+          simpa [mem_sphere'] using hu.1
+        rw [← huv] at hv
+        have hau := hup ▸ inversion_inversion q hr _ ▸
+          Set.mem_image_of_mem (inversion q (dist a q)) hu.2.1
+        have hbu := hup ▸ inversion_inversion q hr _ ▸
+          Set.mem_image_of_mem (inversion q (dist a q)) hu.2.2.1
+        have hcu := hup ▸ inversion_inversion q hr _ ▸
+          Set.mem_image_of_mem (inversion q (dist a q)) hv.2.1
+        have hdu := hup ▸ inversion_inversion q hr _ ▸
+          Set.mem_image_of_mem (inversion q (dist a q)) hv.2.2.1
+        have huq : u.center ≠ q := by
+          contrapose haq with huq
+          simpa [huq] using hau
+        rw [EuclideanGeometry.image_inversion_sphere_dist_center (by simpa using haq) huq]
+          at hau hbu hcu hdu
+        simp only [Set.mem_insert_iff, haq, SetLike.mem_coe, false_or] at hau
+        simp only [Set.mem_insert_iff, hbq, SetLike.mem_coe, false_or] at hbu
+        simp only [Set.mem_insert_iff, hcq, SetLike.mem_coe, false_or] at hcu
+        simp only [Set.mem_insert_iff, hdq, SetLike.mem_coe, false_or] at hdu
+        trans AffineSubspace.perpBisector q (inversion q (dist a q) u.center)
+        · refine AffineSubspace.ext_of_direction_eq ?_ ⟨a, left_mem_affineSpan_pair _ _ _, hau⟩
+          apply Submodule.eq_of_le_of_finrank_eq
+          · apply AffineSubspace.direction_le
+            apply affineSpan_pair_le_of_mem_of_mem hau hbu
+          rw [direction_affineSpan, AffineSubspace.direction_perpBisector, vectorSpan_pair]
+          rw [Submodule.finrank_orthogonal_span_singleton (n := 1) (by simp [huq, haq])]
+          exact finrank_span_singleton (by simp [hab])
+        · symm
+          refine AffineSubspace.ext_of_direction_eq ?_ ⟨c, left_mem_affineSpan_pair _ _ _, hcu⟩
+          apply Submodule.eq_of_le_of_finrank_eq
+          · apply AffineSubspace.direction_le
+            apply affineSpan_pair_le_of_mem_of_mem hcu hdu
+          rw [direction_affineSpan, AffineSubspace.direction_perpBisector, vectorSpan_pair]
+          rw [Submodule.finrank_orthogonal_span_singleton (n := 1) (by simp [huq, haq])]
+          exact finrank_span_singleton (by simp [hcd])
+      convert hp'.inversion ho
+      rw [inversion_inversion _ hr]
+  | ConstructiblePoint.lineCircle l o hl ho p hpl hpo => by
+    match hl with
+    | ConstructibleLine.twoPoints a b ha hb hab _ hal hbl hlr =>
+    have ha := ha.compassConstructiblePoint
+    have hb := hb.compassConstructiblePoint
+    have ho := ho.compassConstructibleCircle
+    by_cases hpoeq : p = o.center
+    · exact hpoeq ▸ ho.compassConstructiblePoint_center
+    obtain ⟨r, hr, hro⟩ := ho.compassConstructiblePoint_radius
+    have hrone : o.center ≠ r := by
+      intro h
+      have ho0 : o.radius = 0 := by simpa [← h] using hro
+      simp [mem_sphere, ho0, hpoeq] at hpo
+    obtain rfl := eq_affineSpan_pair_of_mem hab hlr hal hbl
+    by_cases hol : o.center ∈ line[ℝ, a, b]
+    · by_cases hrl : r ∈ line[ℝ, a, b]
+      · by_cases hrp : r = p
+        · exact hrp ▸ hr
+        convert hr.double ho.compassConstructiblePoint_center
+        have h : AffineSubspace.mk' p (ℝ ∙ (a -ᵥ b)) = line[ℝ, a, b] := by
+          apply AffineSubspace.ext_of_direction_eq
+          · simp [direction_affineSpan, vectorSpan_pair]
+          · use p
+            simp [hpl]
+        rw [← h] at hrl
+        have : r = o.secondInter p (a -ᵥ b) :=
+          ((Sphere.eq_or_eq_secondInter_of_mem_mk'_span_singleton_iff_mem hpo hrl).mpr hro)
+            |>.resolve_left hrp
+        have hmem : p -ᵥ o.center ∈ ℝ ∙ (a -ᵥ b) := by
+          rw [← vectorSpan_pair, ← direction_affineSpan]
+          apply AffineSubspace.vsub_mem_direction hpl hol
+        obtain ⟨k, hk⟩ := Submodule.mem_span_singleton.mp hmem
+        have hk0 : k ≠ 0 := by
+          contrapose hpoeq
+          simpa [hpoeq] using hk.symm
+        have hk' : a -ᵥ b = k⁻¹ • (p -ᵥ o.center) := by
+          rw [← hk, smul_smul, inv_mul_cancel₀ hk0, one_smul]
+        rw [two_smul, add_vadd, vsub_vadd, this, EuclideanGeometry.Sphere.secondInter,
+          hk', real_inner_smul_left, real_inner_smul_left, real_inner_smul_right,
+          real_inner_self_eq_norm_sq, mul_div_assoc, mul_comm _ (k⁻¹ * _), ← div_div,
+          div_self (by simp [hk0, hpoeq]), div_inv_eq_mul, one_mul, smul_smul,
+          mul_inv_cancel_right₀ hk0, neg_smul, two_smul, neg_add, neg_vsub_eq_vsub_rev, add_vadd,
+          vsub_vadd, vsub_vadd_eq_vsub_sub, vsub_self, zero_sub, neg_vsub_eq_vsub_rev, vsub_vadd]
+      let r' := reflection line[ℝ, a, b] r
+      have hr' : CompassConstructiblePoint initial r' := hr.reflection ha hb hab
+      let f := (r -ᵥ r') +ᵥ o.center
+      have hfo : o.center ≠ f := by
+        contrapose hrl with h
+        unfold f at h
+        symm at h
+        rw [← vsub_eq_zero_iff_eq, vadd_vsub, vsub_eq_zero_iff_eq] at h
+        symm at h
+        rw [reflection_eq_self_iff] at h
+        exact h
+      have hf : CompassConstructiblePoint initial f := by
+        refine CompassConstructiblePoint.twoCircles ⟨o.center, dist r r'⟩ ⟨r, dist o.center r'⟩
+          ?_ ?_ ?_ _ ?_ ?_
+        · refine CompassConstructibleCircle.centerRadius' ?_ hr hr' (by simp)
+          exact ho.compassConstructiblePoint_center
+        · apply CompassConstructibleCircle.centerRadius' hr ho.compassConstructiblePoint_center hr'
+          simp
+        · simp [hrone]
+        · simp [mem_sphere, f, dist_eq_norm_vsub]
+        · simp [mem_sphere, f, vsub_vadd_comm r, dist_eq_norm_vsub]
+      let f' := reflection line[ℝ, a, b] f
+      have hff : f ≠ f' := by
+        intro h
+        symm at h
+        unfold f at h
+        rw [reflection_eq_self_iff, AffineSubspace.vadd_mem_iff_mem_direction _ hol] at h
+        unfold r' at h
+        have h2 := Submodule.mem_inf.mpr ⟨h, vsub_reflection_mem line[ℝ, a, b] r⟩
+        rw [(Submodule.isCompl_orthogonal _).inf_eq_bot, Submodule.mem_bot, vsub_eq_zero_iff_eq]
+          at h2
+        symm at h2
+        rw [reflection_eq_self_iff] at h2
+        exact hrl h2
+      have hf' : CompassConstructiblePoint initial f' := hf.reflection ha hb hab
+      have hmid : midpoint ℝ r r' ∈ line[ℝ, a, b] := midpoint_reflection_mem r line[ℝ, a, b]
+      have homid : o.center -ᵥ midpoint ℝ r r' ∈ line[ℝ, a, b].direction := by
+        apply AffineSubspace.vsub_mem_direction hol hmid
+      have hinner1 : inner ℝ (o.center -ᵥ midpoint ℝ r r') (r -ᵥ midpoint ℝ r r') = 0 := by
+        refine (Submodule.mem_orthogonal _ _).mp ?_ _ homid
+        rw [left_vsub_midpoint]
+        apply Submodule.smul_mem
+        apply vsub_reflection_mem
+      have hom : dist o.center (midpoint ℝ r r') ^ 2 + dist r (midpoint ℝ r r') ^ 2 =
+          o.radius ^ 2 := by
+        simp_rw [sq]
+        rw [← (dist_sq_eq_dist_sq_add_dist_sq_iff_angle_eq_pi_div_two _ _ _).mpr ?_,
+          mem_sphere'.mp hro]
+        rw [angle, ← InnerProductGeometry.inner_eq_zero_iff_angle_eq_pi_div_two]
+        exact hinner1
+      have hom' : dist o.center (midpoint ℝ r r') ^ 2 =
+          o.radius ^ 2 - dist r (midpoint ℝ r r') ^ 2 := by linear_combination hom
+      let m := √(5 - 4 * dist o.center (midpoint ℝ r r') ^ 2 / o.radius ^ 2) • (p -ᵥ o.center) +ᵥ
+        o.center
+      have hmmem : m ∈ line[ℝ, a, b] := by
+        refine AffineSubspace.vadd_mem_of_mem_direction ?_ hol
+        apply Submodule.smul_mem
+        exact AffineSubspace.vsub_mem_direction hpl hol
+      have hinner : inner ℝ (p -ᵥ o.center) (r' -ᵥ r) = 0 := by
+        refine (Submodule.mem_orthogonal _ _).mp ?_ _ (AffineSubspace.vsub_mem_direction hpl hol)
+        rw [← neg_vsub_eq_vsub_rev]
+        apply Submodule.neg_mem
+        apply vsub_reflection_mem
+      have hfm : dist f m = dist f r' := by
+        unfold f m
+        conv_lhs =>
+          rw [dist_eq_norm_vsub, vadd_vsub_vadd_cancel_right, sub_eq_add_neg,
+            norm_add_eq_sqrt_iff_real_inner_eq_zero.mpr (by
+              rw [← neg_smul, real_inner_smul_right, real_inner_comm,
+                ← neg_vsub_eq_vsub_rev r' r, inner_neg_right, hinner]
+              simp
+            ), ← sq, ← sq, norm_neg, norm_smul,
+            norm_eq_abs, abs_of_nonneg (sqrt_nonneg _),
+            ← Real.sqrt_sq (show 0 ≤ ‖p -ᵥ o.center‖ by simp), ← Real.sqrt_mul' _ (by simp),
+            ← mem_sphere.mp hpo, dist_eq_norm_vsub _ p, sub_mul,
+            div_mul_cancel₀ _ (by simp [hpoeq]), sq_sqrt (by
+              rw [hom', ← dist_eq_norm_vsub, mem_sphere.mp hpo, mul_sub, ← sub_add, ← sub_mul,
+                show (5 : ℝ) - 4 = 1 by norm_num, one_mul]
+              positivity
+            ), hom', ← mem_sphere.mp hpo,
+            dist_left_midpoint, dist_eq_norm_vsub, dist_eq_norm_vsub, mul_pow, mul_sub, ← mul_assoc,
+            show 4 * (‖(2 : ℝ)‖⁻¹) ^ 2 = 1 by norm_num, one_mul, ← sub_add, ← sub_mul,
+            show (5 : ℝ) - 4 = 1 by norm_num, one_mul, add_comm _ (‖r -ᵥ r'‖ ^ 2), ← add_assoc,
+            ← two_mul]
+        conv_rhs =>
+          rw [dist_eq_norm_vsub, vadd_vsub_assoc,
+            ← vsub_add_vsub_cancel o.center (midpoint ℝ r r') r', midpoint_vsub_right,
+            add_comm, add_assoc,
+            (show (⅟(2 : ℝ) • (r -ᵥ r') + (r -ᵥ r')) =
+              (⅟(2 : ℝ) • (r -ᵥ r') + (1 : ℝ) • (r -ᵥ r')) by simp),
+            ← add_smul,
+            norm_add_eq_sqrt_iff_real_inner_eq_zero.mpr (by
+              rw [left_vsub_midpoint, real_inner_smul_right,
+                mul_eq_zero_iff_left (by simp)] at hinner1
+              rw [real_inner_smul_right, hinner1]
+              simp
+            ), ← sq, ← sq, ← dist_eq_norm_vsub,
+            hom', ← mem_sphere.mp hpo, dist_eq_norm_vsub, dist_eq_norm_vsub, left_vsub_midpoint,
+            norm_smul, norm_smul, mul_pow, mul_pow, sub_add, ← sub_mul,
+            show ‖⅟(2 : ℝ)‖ ^ 2 - ‖⅟(2 : ℝ) + 1‖ ^ 2 = -2 by norm_num,
+            neg_mul, sub_neg_eq_add, add_comm]
+      have hm : CompassConstructiblePoint initial m := by
+        refine CompassConstructiblePoint.twoCircles ⟨f, dist f r'⟩ ⟨f', dist f' r⟩ ?_ ?_ ?_ m ?_ ?_
+        · exact CompassConstructibleCircle.centerRadius _ r' hf hr' (by simp [mem_sphere'])
+        · exact CompassConstructibleCircle.centerRadius _ r hf' hr (by simp [mem_sphere'])
+        · simp [hff]
+        · simp [mem_sphere', hfm]
+        · simp only [mem_sphere]
+          rw [dist_reflection_eq_of_mem _ hmmem, dist_comm m f, hfm]
+          apply dist_reflection
+      have hom : dist o.center m = dist f p := by
+        unfold m f
+        conv_lhs =>
+          rw [dist_eq_norm_vsub', vadd_vsub, norm_smul, hom', norm_eq_abs,
+            abs_of_nonneg (sqrt_nonneg _), ← Real.sqrt_sq (show 0 ≤ ‖p -ᵥ o.center‖ by simp),
+            ← Real.sqrt_mul' _ (by simp), ← mem_sphere.mp hpo, dist_eq_norm_vsub,
+            sub_mul, div_mul_cancel₀ _ (by simp [hpoeq]), mul_sub, ← sub_add, ← sub_mul,
+            show (5 : ℝ) - 4 = 1 by norm_num, one_mul, dist_left_midpoint, mul_pow, ← mul_assoc]
+        conv_rhs =>
+          rw [dist_eq_norm_vsub', vsub_vadd_eq_vsub_sub, sub_eq_add_neg,
+            neg_vsub_eq_vsub_rev, norm_add_eq_sqrt_iff_real_inner_eq_zero.mpr hinner,
+            ← sq, ← sq, ← dist_eq_norm_vsub' _ r]
+        norm_num
+      refine CompassConstructiblePoint.twoCircles o ⟨f, dist o.center m⟩ ho ?_ ?_ p hpo ?_
+      · apply CompassConstructibleCircle.centerRadius' hf ho.compassConstructiblePoint_center hm
+        simp
+      · rw [ne_eq, Sphere.ext_iff.not]
+        simp [hfo]
+      · simp [mem_sphere', hom]
+    · let q := reflection line[ℝ, a, b] o.center
+      have hoq : o.center ≠ q := by
+        contrapose hol
+        exact (reflection_eq_self_iff _).mp hol.symm
+      have hq : CompassConstructiblePoint initial q :=
+        CompassConstructiblePoint.reflection ho.compassConstructiblePoint_center ha hb hab
+      refine CompassConstructiblePoint.twoCircles o ⟨q, o.radius⟩ ho ?_ ?_ _ hpo ?_
+      · apply CompassConstructibleCircle.centerRadius' hq ho.compassConstructiblePoint_center hr
+        rw [mem_sphere'] at hro
+        simp [hro]
+      · rw [ne_eq, Sphere.ext_iff.not]
+        simp [hoq]
+      · simp only [mem_sphere, q]
+        rw [dist_reflection_eq_of_mem _ hpl]
+        rw [mem_sphere] at hpo
+        exact hpo
   | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ ho p hpo₁ hpo₂ =>
     CompassConstructiblePoint.twoCircles o₁ o₂ ho₁.compassConstructibleCircle
       ho₂.compassConstructibleCircle ho p hpo₁ hpo₂
@@ -486,6 +1018,6 @@ theorem ConstructibleCircle.compassConstructibleCircle {initial : Set P} {o : Sp
     CompassConstructibleCircle.centerRadius o r
       hcenter.compassConstructiblePoint hr.compassConstructiblePoint ho
 
-end-/
+end
 
 end EuclideanGeometry
