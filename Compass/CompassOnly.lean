@@ -13,6 +13,14 @@ import Mathlib.Geometry.Euclidean.Sphere.SecondInter
 
 /-!
 
+# Compass-only construction and Mohr–Mascheroni theorem
+
+In this file we define compass-only constructibility:
+* `EuclideanGeometry.CompassConstructiblePoint`
+* `EuclideanGeometry.CompassConstructibleCircle`
+
+and prove the Mohr–Mascheroni theorem: they are equivalent to `EuclideanGeometry.ConstructiblePoint`
+and `EuclideanGeometry.ConstructibleCircle`, respectively.
 
 
 -/
@@ -1019,5 +1027,35 @@ theorem ConstructibleCircle.compassConstructibleCircle {initial : Set P} {o : Sp
       hcenter.compassConstructiblePoint hr.compassConstructiblePoint ho
 
 end
+
+mutual
+
+theorem CompassConstructiblePoint.constructiblePoint {initial : Set P} {p : P}
+    (hp : CompassConstructiblePoint initial p) :
+    ConstructiblePoint initial p := match hp with
+  | CompassConstructiblePoint.given p h =>
+    ConstructiblePoint.given p h
+  | CompassConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ ho p hpo₁ hpo₂ =>
+    ConstructiblePoint.twoCircles o₁ o₂ ho₁.constructibleCircle
+      ho₂.constructibleCircle ho p hpo₁ hpo₂
+
+theorem CompassConstructibleCircle.constructibleCircle {initial : Set P} {o : Sphere P}
+    (ho : CompassConstructibleCircle initial o) :
+    ConstructibleCircle initial o := match ho with
+  | CompassConstructibleCircle.centerRadius o r hcenter hr ho =>
+    ConstructibleCircle.centerRadius o r
+      hcenter.constructiblePoint hr.constructiblePoint ho
+
+end
+
+theorem mohr_mascheroni_point :
+    CompassConstructiblePoint (V := V) (P := P) = ConstructiblePoint := by
+  ext initial p
+  exact ⟨fun h ↦ h.constructiblePoint, fun h ↦ h.compassConstructiblePoint⟩
+
+theorem mohr_mascheroni_circle :
+    CompassConstructibleCircle (V := V) (P := P) = ConstructibleCircle := by
+  ext initial p
+  exact ⟨fun h ↦ h.constructibleCircle, fun h ↦ h.compassConstructibleCircle⟩
 
 end EuclideanGeometry
