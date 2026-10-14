@@ -301,7 +301,7 @@ theorem homothety_mem_sphere (c : P) (r : ℝ) {p : P} {o : Sphere P} (h : p ∈
     homothety c r p ∈ Sphere.mk (homothety c r o.center) (|r| * o.radius) := by
   rw [mem_sphere, dist_eq_norm_vsub] at ⊢ h
   simp only
-  rw [← linearMap_vsub, homothety_linear]
+  rw [← linear_apply_vsub, homothety_linear]
   simp [norm_smul, h]
 
 mutual

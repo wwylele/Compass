@@ -3,6 +3,7 @@ module
 public import Compass.CommonConstruction
 public import Mathlib.Geometry.Euclidean.Inversion.Basic
 
+import Mathlib.Analysis.Normed.Affine.Convex
 import Mathlib.Analysis.Normed.Module.Connected
 import Mathlib.Geometry.Euclidean.Angle.Unoriented.RightAngle
 import Mathlib.Geometry.Euclidean.Circumcenter
@@ -71,24 +72,6 @@ theorem CompassConstructibleCircle.radius_nonneg {initial : Set P}
   | CompassConstructibleCircle.centerRadius o r hcenter hr ho => by
     rw [mem_sphere] at ho
     simp [← ho]
-
-@[simp]
-theorem _root_.EuclideanGeometry_reflection_perpBisector {V P : Type*}
-    [NormedAddCommGroup V] [InnerProductSpace ℝ V] [MetricSpace P] [NormedAddTorsor V P]
-    (a b : P) [(AffineSubspace.perpBisector a b).direction.HasOrthogonalProjection] :
-    haveI : Nonempty ↥(AffineSubspace.perpBisector a b) :=
-      AffineSubspace.perpBisector_nonempty.to_subtype
-    reflection (AffineSubspace.perpBisector a b) a = b := by
-  have : Nonempty ↥(AffineSubspace.perpBisector a b) :=
-    AffineSubspace.perpBisector_nonempty.to_subtype
-  rw [reflection_apply_of_mem _ _ (AffineSubspace.midpoint_mem_perpBisector a b)]
-  simp only [AffineSubspace.direction_perpBisector, left_vsub_midpoint, invOf_eq_inv, map_smul]
-  rw [Submodule.reflection_orthogonal_apply]
-  rw [← map_neg, neg_vsub_eq_vsub_rev]
-  rw [(Submodule.reflection_eq_self_iff _).mpr (by simp)]
-  symm
-  rw [eq_vadd_iff_vsub_eq]
-  simp
 
 theorem CompassConstructiblePoint.reflection {initial : Set P} {a b c : P}
     (ha : CompassConstructiblePoint initial a)

@@ -34,7 +34,7 @@ open scoped Real
 theorem ConstructiblePoint.perpBisector {initial : Set P} {a b : P}
     (ha : ConstructiblePoint initial a) (hb : ConstructiblePoint initial b) (hab : a ≠ b) :
     ConstructibleLine initial (AffineSubspace.perpBisector a b) := by
-  have : IsAddTorsionFree V := IsAddTorsionFree.of_isTorsionFree ℝ V
+  have : HasUniqueDiv V := HasUniqueDiv.of_isTorsionFree ℝ V
   have ho1 : ConstructibleCircle initial ⟨a, dist a b⟩ := by
     apply ConstructibleCircle.centerRadius _ b ha hb
     rw [dist_comm, mem_sphere]
@@ -148,7 +148,7 @@ nonrec
 theorem ConstructiblePoint.midpoint {initial : Set P} {a b : P} (ha : ConstructiblePoint initial a)
     (hb : ConstructiblePoint initial b) :
     ConstructiblePoint initial (midpoint ℝ a b) := by
-  have : IsAddTorsionFree V := IsAddTorsionFree.of_isTorsionFree ℝ V
+  have : HasUniqueDiv V := HasUniqueDiv.of_isTorsionFree ℝ V
   by_cases! hab : a = b
   · simpa [hab, midpoint_self] using hb
   apply ConstructiblePoint.twoLines line[ℝ, a, b] (AffineSubspace.perpBisector a b)
