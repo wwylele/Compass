@@ -244,9 +244,7 @@ theorem cos_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
     · rw [Complex.exp_ofReal_mul_I_im, re_im_image_01]
       apply mem_constructibleClosure_of_sq_mem
       rw [Real.sin_sq]
-      apply sub_mem (by simp)
-      apply pow_mem
-      exact h
+      membership
   · intro h
     have h := re_mem_constructibleClosure h
     rw [Complex.exp_ofReal_mul_I_re, re_im_image_01] at h
@@ -260,15 +258,11 @@ theorem sin_mem_constructibleClosure_iff_isPowerOfTwo_totient {k : ℚ} :
   · intro h
     apply mem_constructibleClosure_of_sq_mem
     rw [Real.cos_sq']
-    apply sub_mem (by simp)
-    apply pow_mem
-    exact h
+    membership
   · intro h
     apply mem_constructibleClosure_of_sq_mem
     rw [Real.sin_sq]
-    apply sub_mem (by simp)
-    apply pow_mem
-    exact h
+    membership
 
 theorem example_3_mem_constructibleClosure :
     Complex.exp ((2 * π * Complex.I) / 3) ∈ constructibleClosure ℚ ℂ := by

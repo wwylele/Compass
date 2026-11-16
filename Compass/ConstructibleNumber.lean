@@ -236,7 +236,7 @@ theorem IsIteratedQuadraticExtension.isPowerOfTwo_natDegree_minpoly {f : Interme
 theorem Polynomial.mem_support_derivative' {R : Type*} {n : ℕ} [Semiring R] {p : Polynomial R}
     (h : IsRightRegular (n + 1 : R)) :
     n ∈ (derivative p).support ↔ n + 1 ∈ p.support := by
-  suffices ¬p.coeff (n + 1) * (n + 1 : ℕ) = 0 ↔ coeff p (n + 1) ≠ 0 by
+  suffices ¬p.coeff (n + 1) * (n + 1 : ℕ) = 0 ↔ p.coeff (n + 1) ≠ 0 by
     simpa only [mem_support_iff, coeff_derivative, Ne, Nat.cast_succ]
   simp [h]
 
@@ -499,7 +499,7 @@ theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructible
   obtain ⟨f, hf, hx⟩ := hx
   have halg : IsAlgebraic f x := by
     refine ⟨Polynomial.X ^ 2 - Polynomial.C ⟨x ^ 2, hx⟩, fun h ↦ ?_, by simp⟩
-    obtain h := congr(Polynomial.coeff $h 2)
+    obtain h := congr(AddMonoidAlgebra.coeff $h 2)
     simp at h
   have hint := halg.isIntegral
   have hle : f ≤ IntermediateField.adjoin K (f ∪ {x}) := by
@@ -520,7 +520,7 @@ theorem mem_constructibleClosure_of_sq_mem {x : L} (hx : x ^ 2 ∈ constructible
     let p : Polynomial f := Polynomial.X ^ 2 - Polynomial.C (⟨x ^ 2, hx⟩)
     have hp : p.aeval x = 0 := by simp [p]
     have hp0 : p ≠ 0 := fun h ↦ by
-      obtain h := congr(Polynomial.coeff $h 2)
+      obtain h := congr(AddMonoidAlgebra.coeff $h 2)
       simp [p, -map_mul] at h
     convert ← Polynomial.natDegree_le_of_dvd (minpoly.dvd _ _ hp) hp0
     simp_rw [Cardinal.toNat_ofNat, p]
@@ -575,7 +575,7 @@ theorem Complex.sq_eq_iff {a b : ℂ} :
     let p : Polynomial ℂ := C 1 * X ^ 2 + C 0 * X + C (-b)
     have hp0 : p ≠ 0 := by
       intro h
-      obtain h := congr(Polynomial.coeff $h 2)
+      obtain h := congr(AddMonoidAlgebra.coeff $h 2)
       simp [p] at h
     have hp : a ∈ p.roots := by
       rw [mem_roots hp0]
@@ -651,56 +651,32 @@ theorem re_im_subset_constructibleClosure {s : Set ℂ} {x : ℂ}
     · apply mem_constructibleClosure_of_mem_subfield
       simp
   · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
-    constructor
-    · rw [Complex.add_re]
-      exact add_mem hxr hyr
-    · rw [Complex.add_im]
-      exact add_mem hxi hyi
+    rw [Complex.add_re, Complex.add_im]
+    constructor <;> membership
   · intro x ⟨hxr, hxi⟩
-    constructor
-    · rw [Complex.neg_re]
-      exact neg_mem hxr
-    · rw [Complex.neg_im]
-      exact neg_mem hxi
+    rw [Complex.neg_re, Complex.neg_im]
+    constructor <;> membership
   · intro x ⟨hxr, hxi⟩
     have hnorm : Complex.normSq x ∈ (constructibleClosure
         (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) := by
       rw [Complex.normSq_apply]
-      apply add_mem
-      · exact mul_mem hxr hxr
-      · exact mul_mem hxi hxi
-    constructor
-    · rw [Complex.inv_re]
-      exact div_mem hxr hnorm
-    · rw [Complex.inv_im]
-      exact div_mem (neg_mem hxi) hnorm
+      membership
+    rw [Complex.inv_re, Complex.inv_im]
+    constructor <;> membership
   · intro x y ⟨hxr, hxi⟩ ⟨hyr, hyi⟩
-    constructor
-    · rw [Complex.mul_re]
-      apply sub_mem
-      · exact mul_mem hxr hyr
-      · exact mul_mem hxi hyi
-    · rw [Complex.mul_im]
-      apply add_mem
-      · exact mul_mem hxr hyi
-      · exact mul_mem hxi hyr
+    rw [Complex.mul_re, Complex.mul_im]
+    constructor <;> membership
   · intro x ⟨hxr, hxi⟩
     have hnorm : ‖x ^ 2‖ ∈ constructibleClosure
         (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
       apply mem_constructibleClosure_of_sq_mem
       rw [Complex.sq_norm, Complex.normSq_apply]
-      apply add_mem
-      · exact mul_mem hxr hxr
-      · exact mul_mem hxi hxi
-    constructor
-    · apply mem_constructibleClosure_of_sq_mem
-      rw [Complex.re_sq_of_sq_eq rfl]
-      refine div_mem ?_ (by simp)
-      exact add_mem hnorm hxr
-    · apply mem_constructibleClosure_of_sq_mem
-      rw [Complex.im_sq_of_sq_eq rfl]
-      refine div_mem ?_ (by simp)
-      exact sub_mem hnorm hxr
+      membership
+    constructor <;> apply mem_constructibleClosure_of_sq_mem
+    · rw [Complex.re_sq_of_sq_eq rfl]
+      membership
+    · rw [Complex.im_sq_of_sq_eq rfl]
+      membership
 
 theorem re_mem_constructibleClosure {s : Set ℂ} {x : ℂ}
     (h : x ∈ constructibleClosure (Subfield.closure s) ℂ) :
@@ -717,9 +693,9 @@ theorem norm_mem_constructibleClosure {s : Set ℂ} {x : ℂ}
     ‖x‖ ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ := by
   apply mem_constructibleClosure_of_sq_mem
   rw [Complex.sq_norm, Complex.normSq_apply]
-  refine add_mem (mul_mem ?re ?re) (mul_mem ?im ?im)
-  · exact re_mem_constructibleClosure h
-  · exact im_mem_constructibleClosure h
+  have := re_mem_constructibleClosure h
+  have := im_mem_constructibleClosure h
+  membership
 
 theorem mem_constructibleClosure_of_real {s : Set ℂ} (h : ∀ x ∈ s, conj x ∈ s) {x : ℝ}
     (hx : x ∈ constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ) :

@@ -57,6 +57,7 @@ theorem system_two_y {x y a b c d e f : ℝ}
   have h2' : e * y + d * x = f := by linear_combination h2
   linear_combination system_two_x h1' h2'
 
+set_option quotPrecheck false in
 local notation "Cℝ(" s ")" =>
   constructibleClosure (Subfield.closure (Complex.re '' s ∪ Complex.im '' s)) ℝ
 local notation "Cℝ*(" s ")" =>
@@ -79,56 +80,22 @@ theorem system_two_mem {s : Set ℝ} {x y a b c d e f : ℝ}
   have hx := system_two_x h1 h2
   have hy := system_two_y h1 h2
   constructor
-  · have h : a * e ^ 2 - b * d * e - 2 * d * f ∈ Cℝ*(s) := by
-      apply sub_mem
-      · apply sub_mem
-        · exact mul_mem ha (pow_mem he _)
-        · exact mul_mem (mul_mem hb hd) he
-      · exact mul_mem (mul_mem (by simp) hd) hf
-    suffices 2 * (d ^ 2 + e ^ 2) * x + (a * e ^ 2 - b * d * e - 2 * d * f) ∈ Cℝ*(s) by
+  · suffices 2 * (d ^ 2 + e ^ 2) * x + (a * e ^ 2 - b * d * e - 2 * d * f) ∈ Cℝ*(s) by
       set g := 2 * (d ^ 2 + e ^ 2) * x + (a * e ^ 2 - b * d * e - 2 * d * f) with hg
       convert_to (2 * (d ^ 2 + e ^ 2)) ⁻¹ * (g - (a * e ^ 2 - b * d * e - 2 * d * f)) ∈ Cℝ*(s)
       · rw [hg, add_sub_cancel_right, inv_mul_cancel_left₀ hde]
-      apply mul_mem
-      · exact inv_mem (mul_mem (by simp) (add_mem (pow_mem hd _) (pow_mem he _)))
-      · exact sub_mem this h
+      membership
     apply mem_constructibleClosure_of_sq_mem
     rw [hx]
-    apply add_mem
-    · apply mul_mem
-      · apply mul_mem (by simp)
-        apply add_mem (pow_mem hd _) (pow_mem he _)
-      · apply sub_mem
-        · apply sub_mem
-          · exact mul_mem (pow_mem he _) hc
-          · exact pow_mem hf _
-        · exact mul_mem (mul_mem hb he) hf
-    · exact pow_mem h _
-  · have h : b * d ^ 2 - a * d * e - 2 * e * f ∈ Cℝ*(s) := by
-      apply sub_mem
-      · apply sub_mem
-        · exact mul_mem hb (pow_mem hd _)
-        · exact mul_mem (mul_mem ha hd) he
-      · exact mul_mem (mul_mem (by simp) he) hf
-    suffices 2 * (d ^ 2 + e ^ 2) * y + (b * d ^ 2 - a * d * e - 2 * e * f) ∈ Cℝ*(s) by
+    membership
+  · suffices 2 * (d ^ 2 + e ^ 2) * y + (b * d ^ 2 - a * d * e - 2 * e * f) ∈ Cℝ*(s) by
       set g := 2 * (d ^ 2 + e ^ 2) * y + (b * d ^ 2 - a * d * e - 2 * e * f) with hg
       convert_to (2 * (d ^ 2 + e ^ 2)) ⁻¹ * (g - (b * d ^ 2 - a * d * e - 2 * e * f)) ∈ Cℝ*(s)
       · rw [hg, add_sub_cancel_right, inv_mul_cancel_left₀ hde]
-      apply mul_mem
-      · exact inv_mem (mul_mem (by simp) (add_mem (pow_mem hd _) (pow_mem he _)))
-      · exact sub_mem this h
+      membership
     apply mem_constructibleClosure_of_sq_mem
     rw [hy]
-    apply add_mem
-    · apply mul_mem
-      · apply mul_mem (by simp)
-        apply add_mem (pow_mem hd _) (pow_mem he _)
-      · apply sub_mem
-        · apply sub_mem
-          · exact mul_mem (pow_mem hd _) hc
-          · exact pow_mem hf _
-        · exact mul_mem (mul_mem ha hd) hf
-    · exact pow_mem h _
+    membership
 
 theorem collinear_of_mem {a b p : ℂ} {l : AffineSubspace ℝ ℂ}
     (hl : Module.finrank ℝ l.direction = 1) (ha : a ∈ l) (hb : b ∈ l) (hp : p ∈ l) :
@@ -157,7 +124,7 @@ theorem line_eq_affineSpan {a b : ℂ} {l : AffineSubspace ℝ ℂ}
   · rw [direction_affineSpan, vectorSpan_pair]
     let v : l.direction := ⟨a -ᵥ b, AffineSubspace.vsub_mem_direction ha hb⟩
     have hv : v ≠ 0 := by simpa [v, sub_eq_zero] using h
-    rw [finrank_eq_one_iff_of_nonzero v hv] at hl
+    rw [finrank_eq_one_iff_of_ne_zero v hv] at hl
     have hl := congr(Submodule.map (l.direction.subtype) $hl)
     simpa [v] using hl.symm
   · refine ⟨a, ?_, ?_⟩
@@ -184,16 +151,12 @@ theorem system_one_mem {s : Set ℝ} {x y a b c d e f : ℝ}
       rw [inv_mul_cancel_left₀ (by simpa [sub_eq_zero] using hdet)] at this
       exact this
     rw [h3]
-    refine mul_mem (inv_mem ?_) ?_
-    · apply sub_mem (mul_mem ha he) (mul_mem hb hd)
-    · apply sub_mem (mul_mem hc he) (mul_mem hf hb)
+    membership
   · suffices (a * e - b * d)⁻¹ * ((a * e - b * d) * y) ∈ Cℝ*(s) by
       rw [inv_mul_cancel_left₀ (by simpa [sub_eq_zero] using hdet)] at this
       exact this
     rw [h4]
-    refine mul_mem (inv_mem ?_) ?_
-    · apply sub_mem (mul_mem ha he) (mul_mem hb hd)
-    · apply sub_mem (mul_mem hf ha) (mul_mem hc hd)
+    membership
 
 
 theorem ConstructiblePoint.mem_constructibleClosure {initial : Set ℂ}
@@ -289,16 +252,7 @@ theorem ConstructiblePoint.mem_constructibleClosure {initial : Set ℂ}
           use (ra - rc * w) / (ra - rb)
           simp only [Complex.ofReal_sub, Complex.ofReal_one, Complex.ofReal_div, Complex.ofReal_mul]
           grind
-      · exact sub_mem ha.2 hb.2
-      · exact sub_mem hb.1 ha.1
-      · apply sub_mem
-        · exact mul_mem ha.1 (sub_mem ha.2 hb.2)
-        · exact mul_mem ha.2 (sub_mem ha.1 hb.1)
-      · exact sub_mem hc.2 hd.2
-      · exact sub_mem hd.1 hc.1
-      · apply sub_mem
-        · exact mul_mem hc.1 (sub_mem hc.2 hd.2)
-        · exact mul_mem hc.2 (sub_mem hc.1 hd.1)
+      all_goals membership
   | ConstructiblePoint.lineCircle l o hl ho p hpl hpo =>
     match ho with
     | ConstructibleCircle.centerRadius o r ho hr hro =>
@@ -326,18 +280,7 @@ theorem ConstructiblePoint.mem_constructibleClosure {initial : Set ℂ}
         · symm
           simpa [sub_eq_zero] using hab.2
         · simpa [sub_eq_zero] using hab.1
-      · exact mul_mem (by simp) ho.1
-      · exact mul_mem (by simp) ho.2
-      · apply sub_mem
-        · refine add_mem (pow_mem ?_ _) (pow_mem ?_ _)
-          · exact sub_mem hr.1 ho.1
-          · exact sub_mem hr.2 ho.2
-        · exact add_mem (pow_mem ho.1 _) (pow_mem ho.2 _)
-      · exact sub_mem ha.2 hb.2
-      · exact sub_mem hb.1 ha.1
-      · apply sub_mem
-        · exact mul_mem ha.1 (sub_mem ha.2 hb.2)
-        · exact mul_mem ha.2 (sub_mem ha.1 hb.1)
+      all_goals membership
   | ConstructiblePoint.twoCircles o₁ o₂ ho₁ ho₂ h p hpo₁ hpo₂ =>
     match ho₁ with
     | ConstructibleCircle.centerRadius o₁ r₁ ho₁ hr₁ hro₁ =>
@@ -376,22 +319,7 @@ theorem ConstructiblePoint.mem_constructibleClosure {initial : Set ℂ}
         ext
         · exact hcenter
         · rw [← hpo₁, ← hpo₂, hcenter]
-      · exact mul_mem (by simp) ho₁.1
-      · exact mul_mem (by simp) ho₁.2
-      · apply sub_mem
-        · refine add_mem (pow_mem ?_ _) (pow_mem ?_ _)
-          · exact sub_mem hr₁.1 ho₁.1
-          · exact sub_mem hr₁.2 ho₁.2
-        · exact add_mem (pow_mem ho₁.1 _) (pow_mem ho₁.2 _)
-      · exact mul_mem (by simp) <| sub_mem ho₁.1 ho₂.1
-      · exact mul_mem (by simp) <| sub_mem ho₁.2 ho₂.2
-      · apply sub_mem
-        · refine add_mem ?_ (pow_mem ho₁.2 _)
-          refine add_mem ?_ (pow_mem ho₁.1 _)
-          exact add_mem (pow_mem (sub_mem hr₂.1 ho₂.1) _) (pow_mem (sub_mem hr₂.2 ho₂.2) _)
-        · refine add_mem ?_ (pow_mem ho₂.2 _)
-          refine add_mem ?_ (pow_mem ho₂.1 _)
-          exact add_mem (pow_mem (sub_mem hr₁.1 ho₁.1) _) (pow_mem (sub_mem hr₁.2 ho₁.2) _)
+      all_goals membership
 
 theorem constructiblePoint_of_mem_constructibleClosure {initial : Set ℂ}
     (h0 : ConstructiblePoint initial 0) (h1 : ConstructiblePoint initial 1) {p : ℂ}

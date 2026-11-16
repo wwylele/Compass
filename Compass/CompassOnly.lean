@@ -538,7 +538,7 @@ theorem CompassConstructibleCircle.threePoints {initial : Set P} {a b c : P}
   have hd : CompassConstructiblePoint initial d := hc.inversion hoab
   let x := reflection line[ℝ, b, d] a
   have hxa : x ≠ a := by
-    contrapose! hind with h
+    contrapose hind with h
     rw [← collinear_iff_not_affineIndependent]
     convert_to Collinear ℝ {c, a, b}
     · simp
